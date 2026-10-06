@@ -1,0 +1,6 @@
+bin/
+obj/
+.vs/
+*.user
+Website.Api/wwwroot/uploads/*
+!Website.Api/wwwroot/uploads/sample/

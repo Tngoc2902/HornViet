@@ -1,0 +1,36 @@
+using Website.Api.Authorization;
+using Website.Api.Models.Account;
+using Website.Application.Accounts;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Website.Api.Controllers.Account;
+
+/// <summary>UC Đăng nhập. Đăng xuất: frontend chỉ cần xóa accessToken (JWT không lưu trạng thái phía server).</summary>
+[Route("api/[controller]/[action]")]
+public class TokenAuthController : WebsiteBaseController
+{
+    private readonly IAccountAppService _accountAppService;
+    private readonly TokenService _tokenService;
+
+    public TokenAuthController(IAccountAppService accountAppService, TokenService tokenService)
+    {
+        _accountAppService = accountAppService;
+        _tokenService = tokenService;
+    }
+
+    [HttpPost]
+    public async Task<AuthenticateResultModel> Authenticate([FromBody] AuthenticateModel model)
+    {
+        var user = await _accountAppService.ValidateCredentialsAsync(model);
+        var (token, expireInSeconds) = _tokenService.CreateToken(user);
+        return new AuthenticateResultModel
+        {
+            AccessToken = token,
+            ExpireInSeconds = expireInSeconds,
+            UserId = user.UserId,
+            UserName = user.UserName,
+            Name = user.Name,
+            Roles = user.Roles
+        };
+    }
+}

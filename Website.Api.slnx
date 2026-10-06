@@ -1,0 +1,10 @@
+<Solution>
+  <Project Path="SharedKernel/SharedKernel.csproj" />
+  <Project Path="Website.Domain/Website.Domain.csproj" />
+  <Project Path="Website.Application/Website.Application.csproj" />
+  <Project Path="Website.Infrastructure/Website.Infrastructure.csproj" />
+  <Project Path="Website.Api/Website.Api.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="tests/Website.Domain.UnitTests/Website.Domain.UnitTests.csproj" />
+  </Folder>
+</Solution>
