@@ -19,7 +19,9 @@ public class FileController : WebsiteBaseController
 
     [HttpPost]
     [RequestSizeLimit(MaxBytes + 64 * 1024)]
-    public async Task<UploadFileOutput> UploadImage(IFormFile file)
+    public Task<ActionResult<UploadFileOutput>> UploadImage(IFormFile file) => Run(() => SaveImageAsync(file));
+
+    private async Task<UploadFileOutput> SaveImageAsync(IFormFile file)
     {
         if (file is not { Length: > 0 })
             throw new UserFriendlyException("Vui lòng chọn ảnh.");

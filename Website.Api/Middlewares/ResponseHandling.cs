@@ -28,6 +28,27 @@ public class WrapResultFilter : IAsyncAlwaysRunResultFilter
     }
 }
 
+/// <summary>
+/// Ánh xạ lỗi nghiệp vụ → HTTP status + AjaxResponse. Dùng chung cho WebsiteBaseController.Run (bắt lỗi ngay trong
+/// controller) và ExceptionHandlingMiddleware (lưới an toàn cho lỗi ném ngoài controller).
+/// </summary>
+public static class BusinessErrors
+{
+    /// <summary>true nếu ex là lỗi nghiệp vụ đã biết (400 / 404 / 409); false = lỗi hệ thống (500).</summary>
+    public static bool TryMap(Exception ex, out int status, out AjaxResponse response)
+    {
+        (status, response) = ex switch
+        {
+            EntityNotFoundException nf => (StatusCodes.Status404NotFound, AjaxResponse.Fail(nf.Message, nf.Details)),
+            UserFriendlyException uf => (StatusCodes.Status400BadRequest, AjaxResponse.Fail(uf.Message, uf.Details)),
+            DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, AjaxResponse.Fail(
+                "Dữ liệu (tồn kho) vừa được cập nhật bởi giao dịch khác. Vui lòng tải lại và thử lại.")),
+            _ => (0, null!)
+        };
+        return status != 0;
+    }
+}
+
 /// <summary>Chuyển exception thành AjaxResponse với HTTP status phù hợp.</summary>
 public class ExceptionHandlingMiddleware
 {
@@ -48,14 +69,11 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex) when (!context.Response.HasStarted)
         {
-            var (status, response) = ex switch
+            if (!BusinessErrors.TryMap(ex, out var status, out var response))
             {
-                EntityNotFoundException nf => (StatusCodes.Status404NotFound, AjaxResponse.Fail(nf.Message, nf.Details)),
-                UserFriendlyException uf => (StatusCodes.Status400BadRequest, AjaxResponse.Fail(uf.Message, uf.Details)),
-                DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, AjaxResponse.Fail(
-                    "Dữ liệu (tồn kho) vừa được cập nhật bởi giao dịch khác. Vui lòng tải lại và thử lại.")),
-                _ => (StatusCodes.Status500InternalServerError, AjaxResponse.Fail("Đã có lỗi xảy ra trong quá trình xử lý."))
-            };
+                status = StatusCodes.Status500InternalServerError;
+                response = AjaxResponse.Fail("Đã có lỗi xảy ra trong quá trình xử lý.");
+            }
 
             if (status == StatusCodes.Status500InternalServerError)
                 _logger.LogError(ex, "Unhandled exception for {Method} {Path}", context.Request.Method, context.Request.Path);

@@ -14,24 +14,24 @@ public class ProductController : WebsiteBaseController
     public ProductController(IProductAppService service) => _service = service;
 
     [HttpGet]
-    public Task<PagedResultDto<ProductListItemDto>> GetAll([FromQuery] GetProductsInput input) => _service.GetAllAsync(input);
+    public Task<ActionResult<PagedResultDto<ProductListItemDto>>> GetAll([FromQuery] GetProductsInput input) => Run(() => _service.GetAllAsync(input));
 
     [HttpGet]
-    public Task<ProductDetailDto> Get([FromQuery] int id) => _service.GetAsync(id);
+    public Task<ActionResult<ProductDetailDto>> Get([FromQuery] int id) => Run(() => _service.GetAsync(id));
 
     [HttpGet, Authorize(Policy = AuthorizationPolicies.Management)]
-    public Task<PagedResultDto<ProductAdminListItemDto>> GetAdminList([FromQuery] GetProductsForAdminInput input) =>
-        _service.GetAdminListAsync(input);
+    public Task<ActionResult<PagedResultDto<ProductAdminListItemDto>>> GetAdminList([FromQuery] GetProductsForAdminInput input) =>
+        Run(() => _service.GetAdminListAsync(input));
 
     [HttpPost, Authorize(Policy = AuthorizationPolicies.Management)]
-    public Task<ProductDetailDto> Create([FromBody] CreateOrUpdateProductInput input) => _service.CreateAsync(input);
+    public Task<ActionResult<ProductDetailDto>> Create([FromBody] CreateOrUpdateProductInput input) => Run(() => _service.CreateAsync(input));
 
     [HttpPut, Authorize(Policy = AuthorizationPolicies.Management)]
-    public Task<ProductDetailDto> Update([FromBody] CreateOrUpdateProductInput input) => _service.UpdateAsync(input);
+    public Task<ActionResult<ProductDetailDto>> Update([FromBody] CreateOrUpdateProductInput input) => Run(() => _service.UpdateAsync(input));
 
     [HttpPut, Authorize(Policy = AuthorizationPolicies.Management)]
-    public Task SetActive([FromBody] SetProductActiveInput input) => _service.SetActiveAsync(input);
+    public Task<IActionResult> SetActive([FromBody] SetProductActiveInput input) => Run(() => _service.SetActiveAsync(input));
 
     [HttpDelete, Authorize(Policy = AuthorizationPolicies.Management)]
-    public Task Delete([FromQuery] int id) => _service.DeleteAsync(id);
+    public Task<IActionResult> Delete([FromQuery] int id) => Run(() => _service.DeleteAsync(id));
 }

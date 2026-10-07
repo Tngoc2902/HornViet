@@ -14,21 +14,21 @@ public class ProfileController : WebsiteBaseController
     public ProfileController(IProfileAppService profileAppService) => _profileAppService = profileAppService;
 
     [HttpGet]
-    public Task<ProfileDto> GetMyProfile() => _profileAppService.GetMyProfileAsync();
+    public Task<ActionResult<ProfileDto>> GetMyProfile() => Run(() => _profileAppService.GetMyProfileAsync());
 
     [HttpPut]
-    public Task<ProfileDto> UpdateMyProfile([FromBody] UpdateProfileInput input) => _profileAppService.UpdateMyProfileAsync(input);
+    public Task<ActionResult<ProfileDto>> UpdateMyProfile([FromBody] UpdateProfileInput input) => Run(() => _profileAppService.UpdateMyProfileAsync(input));
 
     [HttpPost]
-    public Task ChangePassword([FromBody] ChangePasswordInput input) => _profileAppService.ChangePasswordAsync(input);
+    public Task<IActionResult> ChangePassword([FromBody] ChangePasswordInput input) => Run(() => _profileAppService.ChangePasswordAsync(input));
 
     [HttpGet]
-    public Task<ListResultDto<AddressDto>> GetMyAddresses() => _profileAppService.GetMyAddressesAsync();
+    public Task<ActionResult<ListResultDto<AddressDto>>> GetMyAddresses() => Run(() => _profileAppService.GetMyAddressesAsync());
 
     /// <summary>Tạo mới (không có id) hoặc cập nhật (có id) địa chỉ giao hàng.</summary>
     [HttpPost]
-    public Task<AddressDto> SaveAddress([FromBody] CreateOrUpdateAddressInput input) => _profileAppService.SaveAddressAsync(input);
+    public Task<ActionResult<AddressDto>> SaveAddress([FromBody] CreateOrUpdateAddressInput input) => Run(() => _profileAppService.SaveAddressAsync(input));
 
     [HttpDelete]
-    public Task DeleteAddress([FromQuery] int id) => _profileAppService.DeleteAddressAsync(id);
+    public Task<IActionResult> DeleteAddress([FromQuery] int id) => Run(() => _profileAppService.DeleteAddressAsync(id));
 }

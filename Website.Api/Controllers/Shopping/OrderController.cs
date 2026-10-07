@@ -15,21 +15,21 @@ public class OrderController : WebsiteBaseController
     public OrderController(IOrderAppService service) => _service = service;
 
     [HttpPost]
-    public Task<OrderDto> Create([FromBody] CreateOrderInput input) => _service.CreateAsync(input);
+    public Task<ActionResult<OrderDto>> Create([FromBody] CreateOrderInput input) => Run(() => _service.CreateAsync(input));
 
     [HttpGet]
-    public Task<PagedResultDto<OrderListItemDto>> GetMyOrders([FromQuery] GetMyOrdersInput input) => _service.GetMyOrdersAsync(input);
+    public Task<ActionResult<PagedResultDto<OrderListItemDto>>> GetMyOrders([FromQuery] GetMyOrdersInput input) => Run(() => _service.GetMyOrdersAsync(input));
 
     /// <summary>Chi tiết đơn: khách xem đơn của mình, Nhân viên/Quản trị viên xem mọi đơn.</summary>
     [HttpGet]
-    public Task<OrderDto> Get([FromQuery] int id) => _service.GetAsync(id);
+    public Task<ActionResult<OrderDto>> Get([FromQuery] int id) => Run(() => _service.GetAsync(id));
 
     [HttpPost]
-    public Task<OrderDto> Cancel([FromBody] EntityDto<int> input) => _service.CancelAsync(input.Id);
+    public Task<ActionResult<OrderDto>> Cancel([FromBody] EntityDto<int> input) => Run(() => _service.CancelAsync(input.Id));
 
     [HttpGet, Authorize(Policy = AuthorizationPolicies.Management)]
-    public Task<PagedResultDto<OrderListItemDto>> GetAll([FromQuery] GetOrdersInput input) => _service.GetAllAsync(input);
+    public Task<ActionResult<PagedResultDto<OrderListItemDto>>> GetAll([FromQuery] GetOrdersInput input) => Run(() => _service.GetAllAsync(input));
 
     [HttpPut, Authorize(Policy = AuthorizationPolicies.Management)]
-    public Task<OrderDto> UpdateStatus([FromBody] UpdateOrderStatusInput input) => _service.UpdateStatusAsync(input);
+    public Task<ActionResult<OrderDto>> UpdateStatus([FromBody] UpdateOrderStatusInput input) => Run(() => _service.UpdateStatusAsync(input));
 }
