@@ -6,7 +6,8 @@ using Website.Domain.Interfaces.Repositories;
 using Website.Domain.SharedKernel;
 using Website.Domain.Users.Entities;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Website.Domain.Users.Enums;
 
 namespace Website.Application.Users;
 
@@ -188,7 +189,7 @@ public class UserAppService : IUserAppService
         var user = await LoadUserAsync(input.UserId);
         var roles = await ResolveRolesAsync(input.RoleNames);
 
-        if (user.Id == _session.GetUserId() && roles.All(r => r.Name != StaticRoleNames.Admin))
+        if (user.Id == _session.GetUserId() && roles.All(r => r.Name != nameof(RoleName.Admin)))
             throw new UserFriendlyException("Bạn không thể tự gỡ quyền Quản trị viên của chính mình.");
 
         var removed = user.Roles.Where(ur => roles.All(r => r.Id != ur.RoleId)).ToList();

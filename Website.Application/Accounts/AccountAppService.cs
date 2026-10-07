@@ -10,7 +10,7 @@ using Website.Domain;
 using Website.Domain.Interfaces.Repositories;
 // UserFriendlyException: lỗi nghiệp vụ, middleware chuyển thành HTTP 400 kèm thông báo tiếng Việt.
 using Website.Domain.SharedKernel;
-// Các thực thể User, Role, UserRole và hằng số tên vai trò StaticRoleNames.
+// Các thực thể User, Role, UserRole, PasswordResetToken.
 using Website.Domain.Users.Entities;
 // IPasswordHasher / PasswordHasher: băm và kiểm tra mật khẩu (lấy từ ASP.NET Core Identity).
 using Microsoft.AspNetCore.Identity;
@@ -18,7 +18,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 // ILogger: ghi log khi gửi email thất bại; IOptions: đọc AppUrlOptions đã đăng ký từ cấu hình.
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
+using Website.Domain.Users.Enums;
 
 namespace Website.Application.Accounts;
 
@@ -183,7 +184,7 @@ public class AccountAppService : IAccountAppService
             throw new UserFriendlyException("Tài khoản này đã được sử dụng.");
 
         // Tài khoản tự đăng ký luôn chỉ có vai trò Khách hàng.
-        var customerRole = await _roleRepository.GetAll().SingleAsync(r => r.Name == StaticRoleNames.Customer);
+        var customerRole = await _roleRepository.GetAll().SingleAsync(r => r.Name == nameof(RoleName.Customer));
 
         var user = new User
         {
@@ -253,7 +254,7 @@ public class AccountAppService : IAccountAppService
         try
         {
             // Nhân viên / Quản trị viên nhận link về trang quản trị, khách hàng về trang cửa hàng.
-            var isStaff = user.Roles.Any(r => r.Role?.Name is StaticRoleNames.Admin or StaticRoleNames.Staff);
+            var isStaff = user.Roles.Any(r => r.Role?.Name is nameof(RoleName.Admin) or nameof(RoleName.Staff));
             var baseUrl = isStaff && !string.IsNullOrWhiteSpace(_urls.AdminRootAddress)
                 ? _urls.AdminRootAddress
                 : _urls.ClientRootAddress;

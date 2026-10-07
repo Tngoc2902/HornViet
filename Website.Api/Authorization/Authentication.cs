@@ -10,7 +10,8 @@ using Website.Domain.Users.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.IdentityModel.Tokens;
+using Website.Domain.Users.Enums;
 
 namespace Website.Api.Authorization;
 
@@ -138,8 +139,8 @@ public static class AuthenticationSetup
             });
 
         services.AddAuthorizationBuilder()
-            .AddPolicy(AuthorizationPolicies.Management, p => p.RequireRole(StaticRoleNames.Admin, StaticRoleNames.Staff))
-            .AddPolicy(AuthorizationPolicies.AdminOnly, p => p.RequireRole(StaticRoleNames.Admin));
+            .AddPolicy(AuthorizationPolicies.Management, p => p.RequireRole(nameof(RoleName.Admin), nameof(RoleName.Staff)))
+            .AddPolicy(AuthorizationPolicies.AdminOnly, p => p.RequireRole(nameof(RoleName.Admin)));
 
         return services;
     }

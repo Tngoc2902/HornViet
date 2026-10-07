@@ -8,6 +8,7 @@ using Website.Domain.Users.Entities;
 using Microsoft.EntityFrameworkCore;
 using Website.Application.Statistics.Enums;
 using Website.Domain.Orders.Enums;
+using Website.Domain.Users.Enums;
 
 namespace Website.Application.Statistics;
 
@@ -172,7 +173,7 @@ public class StatisticAppService : IStatisticAppService
             PendingOrderCount = await orders.CountAsync(o => o.Status == OrderStatus.Pending),
             ShippingOrderCount = await orders.CountAsync(o => o.Status == OrderStatus.Shipping),
             TodayOrderCount = await orders.CountAsync(o => o.CreationTime >= today),
-            CustomerCount = await _userRepository.GetAll().CountAsync(u => u.Roles.Any(r => r.Role.Name == StaticRoleNames.Customer)),
+            CustomerCount = await _userRepository.GetAll().CountAsync(u => u.Roles.Any(r => r.Role.Name == nameof(RoleName.Customer))),
             LowStockVariants = await _variantRepository.GetAll()
                 .Where(v => v.StockQuantity <= AppConsts.LowStockThreshold && v.Product.IsActive)
                 .OrderBy(v => v.StockQuantity).ThenBy(v => v.Id)
@@ -189,7 +190,7 @@ public class StatisticAppService : IStatisticAppService
                 .ToListAsync()
         };
 
-        if (_session.IsInRole(StaticRoleNames.Admin))
+        if (_session.IsInRole(RoleName.Admin))
         {
             dto.TodayRevenue = await CompletedOrders(today, today.AddDays(1)).SumAsync(o => (decimal?)o.TotalAmount) ?? 0;
             dto.MonthRevenue = await CompletedOrders(monthStart, monthStart.AddMonths(1)).SumAsync(o => (decimal?)o.TotalAmount) ?? 0;

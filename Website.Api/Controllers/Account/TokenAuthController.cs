@@ -2,7 +2,7 @@ using Website.Api.Authorization;
 using Website.Api.Models.Account;
 using Website.Application.Accounts;
 using Website.Domain.SharedKernel;
-using Website.Domain.Users.Entities;
+using Website.Domain.Users.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Website.Api.Controllers.Account;
@@ -36,7 +36,7 @@ public class TokenAuthController : WebsiteBaseController
     public async Task<AuthenticateResultModel> AuthenticateAdmin([FromBody] AuthenticateModel model)
     {
         var user = await _accountAppService.ValidateCredentialsAsync(model);
-        if (!user.Roles.Contains(StaticRoleNames.Admin) && !user.Roles.Contains(StaticRoleNames.Staff))
+        if (!user.Roles.Contains(nameof(RoleName.Admin)) && !user.Roles.Contains(nameof(RoleName.Staff)))
             throw new UserFriendlyException("Tài khoản không có quyền truy cập trang quản trị.");
 
         return CreateResult(user);
