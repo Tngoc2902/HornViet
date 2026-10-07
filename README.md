@@ -69,8 +69,10 @@ Link đặt lại mật khẩu trong email trỏ về `App:ClientRootAddress` (K
 
 - **Dev, chưa có tài khoản email** (`Smtp:Host` để trống — mặc định): email không gửi đi mà được lưu thành file `.eml`
   trong `Website.Api/App_Data/mails/` (log ghi đường dẫn). Mở file bằng Outlook / Thunderbird hoặc trình soạn thảo để lấy link.
-- **Gửi thật** (VD Gmail, cần bật xác minh 2 bước và tạo App Password): đặt qua user-secrets hoặc biến môi trường,
-  không ghi mật khẩu vào `appsettings.json`:
+- **Gửi thật qua Gmail**:
+  1. Bật **Xác minh 2 bước** cho tài khoản Google: https://myaccount.google.com/security
+  2. Tạo **App Password** (mật khẩu ứng dụng 16 ký tự) tại https://myaccount.google.com/apppasswords
+  3. Đặt cấu hình bằng user-secrets (không ghi mật khẩu vào `appsettings.json`), thay địa chỉ và mật khẩu của bạn:
 
 ```bash
 dotnet user-secrets set "Smtp:Host" "smtp.gmail.com" --project Website.Api
@@ -81,9 +83,11 @@ dotnet user-secrets set "Smtp:UserName" "ten-ban@gmail.com" --project Website.Ap
 ```bash
 dotnet user-secrets set "Smtp:Password" "<app-password-16-ky-tu>" --project Website.Api
 ```
-```bash
-dotnet user-secrets set "Smtp:FromAddress" "ten-ban@gmail.com" --project Website.Api
-```
+
+  Địa chỉ người gửi tự lấy theo `Smtp:UserName` (Gmail bắt buộc gửi bằng chính tài khoản đăng nhập). Chạy lại backend:
+  nếu cấu hình còn thiếu, log khởi động có dòng `Cấu hình email: ...`; gửi thành công có dòng `Đã gửi email ...`,
+  gửi lỗi có dòng `Không gửi được email đặt lại mật khẩu ...` kèm chi tiết lỗi SMTP.
+  Để thử, cần một tài khoản có **email thật** (tài khoản demo `admin`, `staff` dùng email `@honsungviet.local` không nhận được thư).
 
 ### Debug bằng Visual Studio
 

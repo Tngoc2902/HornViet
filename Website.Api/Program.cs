@@ -4,8 +4,10 @@ using Website.Application;
 using Website.Application.Common;
 using Website.Infrastructure;
 using Website.Infrastructure.Persistence;
+using Website.Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 
 // Program.cs là điểm khởi động của Web API (tầng Presentation – Website.Api), viết theo kiểu "top-level statements":
@@ -86,6 +88,14 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+// Cảnh báo sớm khi cấu hình gửi email (UC Quên mật khẩu) chưa đủ — thay vì chỉ thấy lỗi khi người dùng không nhận được mail.
+var smtp = app.Services.GetRequiredService<IOptions<SmtpOptions>>().Value;
+foreach (var problem in smtp.GetConfigurationProblems())
+    app.Logger.LogWarning("Cấu hình email: {Problem}", problem);
+if (!smtp.SendsRealEmail)
+    app.Logger.LogInformation("Smtp:Host trống — email Quên mật khẩu được lưu thành file .eml trong {Directory}",
+        Path.GetFullPath(smtp.PickupDirectory));
 
 if (config.GetValue("Database:MigrateOnStartup", false))
 {

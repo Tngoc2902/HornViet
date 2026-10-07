@@ -17,10 +17,35 @@ public class SmtpOptions
     public string? UserName { get; set; }
     /// <summary>Mật khẩu SMTP (với Gmail là App Password) — đặt qua biến môi trường, không ghi vào appsettings.json.</summary>
     public string? Password { get; set; }
-    public string FromAddress { get; set; } = "no-reply@honsungviet.local";
+    /// <summary>
+    /// Địa chỉ người gửi. Để trống = dùng Smtp:UserName (Gmail, Outlook bắt buộc gửi bằng chính tài khoản đăng nhập).
+    /// </summary>
+    public string? FromAddress { get; set; }
     public string FromName { get; set; } = "Hồn Sừng Việt";
     /// <summary>Thư mục lưu file .eml khi chưa cấu hình Host (đường dẫn tương đối tính từ thư mục chạy ứng dụng).</summary>
     public string PickupDirectory { get; set; } = "App_Data/mails";
+
+    /// <summary>true = gửi thật qua SMTP; false = chỉ lưu file .eml (môi trường dev chưa có tài khoản email).</summary>
+    public bool SendsRealEmail => !string.IsNullOrWhiteSpace(Host);
+
+    /// <summary>Địa chỉ người gửi thực tế: FromAddress, nếu trống thì UserName, cuối cùng là địa chỉ mặc định.</summary>
+    public string EffectiveFromAddress =>
+        !string.IsNullOrWhiteSpace(FromAddress) ? FromAddress
+        : !string.IsNullOrWhiteSpace(UserName) && UserName.Contains('@') ? UserName
+        : "no-reply@honsungviet.local";
+
+    /// <summary>Các lỗi cấu hình khiến email không gửi được — Program.cs ghi cảnh báo lúc khởi động.</summary>
+    public IEnumerable<string> GetConfigurationProblems()
+    {
+        if (!SendsRealEmail)
+            yield break;
+        if (string.IsNullOrWhiteSpace(UserName))
+            yield return "Đã đặt Smtp:Host nhưng thiếu Smtp:UserName (địa chỉ email đăng nhập SMTP).";
+        if (string.IsNullOrWhiteSpace(Password))
+            yield return "Đã đặt Smtp:Host nhưng thiếu Smtp:Password (với Gmail là App Password 16 ký tự).";
+        if (EffectiveFromAddress.EndsWith(".local", StringComparison.OrdinalIgnoreCase))
+            yield return "Địa chỉ người gửi là " + EffectiveFromAddress + " — máy chủ mail thật sẽ từ chối; đặt Smtp:UserName là email thật.";
+    }
 }
 
 /// <summary>
@@ -42,7 +67,7 @@ public class SmtpEmailSender : IEmailSender
     {
         using var message = new MailMessage
         {
-            From = new MailAddress(_options.FromAddress, _options.FromName, Encoding.UTF8),
+            From = new MailAddress(_options.EffectiveFromAddress, _options.FromName, Encoding.UTF8),
             Subject = subject,
             SubjectEncoding = Encoding.UTF8,
             Body = htmlBody,
@@ -53,7 +78,8 @@ public class SmtpEmailSender : IEmailSender
 
         using var client = new SmtpClient();
 
-        if (string.IsNullOrWhiteSpace(_options.Host))
+        var host = _options.Host;
+        if (string.IsNullOrWhiteSpace(host))
         {
             var directory = Path.GetFullPath(_options.PickupDirectory);
             Directory.CreateDirectory(directory);
@@ -65,7 +91,7 @@ public class SmtpEmailSender : IEmailSender
             return;
         }
 
-        client.Host = _options.Host;
+        client.Host = host;
         client.Port = _options.Port;
         client.EnableSsl = _options.EnableSsl;
         client.DeliveryMethod = SmtpDeliveryMethod.Network;
@@ -73,5 +99,6 @@ public class SmtpEmailSender : IEmailSender
             client.Credentials = new NetworkCredential(_options.UserName, _options.Password);
 
         await client.SendMailAsync(message, ct);
+        _logger.LogInformation("Đã gửi email \"{Subject}\" qua {Host}:{Port}", subject, _options.Host, _options.Port);
     }
 }
