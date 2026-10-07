@@ -14,17 +14,17 @@ public class CategoryController : WebsiteBaseController
     public CategoryController(ICategoryAppService service) => _service = service;
 
     [HttpGet]
-    public Task<ListResultDto<CategoryDto>> GetAll() => _service.GetAllAsync();
+    public Task<ActionResult<ListResultDto<CategoryDto>>> GetAll() => Run(() => _service.GetAllAsync());
 
     [HttpGet]
-    public Task<CategoryDto> Get([FromQuery] int id) => _service.GetAsync(id);
+    public Task<ActionResult<CategoryDto>> Get([FromQuery] int id) => Run(() => _service.GetAsync(id));
 
     [HttpPost, Authorize(Policy = AuthorizationPolicies.Management)]
-    public Task<CategoryDto> Create([FromBody] CreateOrUpdateCategoryInput input) => _service.CreateAsync(input);
+    public Task<ActionResult<CategoryDto>> Create([FromBody] CreateOrUpdateCategoryInput input) => Run(() => _service.CreateAsync(input));
 
     [HttpPut, Authorize(Policy = AuthorizationPolicies.Management)]
-    public Task<CategoryDto> Update([FromBody] CreateOrUpdateCategoryInput input) => _service.UpdateAsync(input);
+    public Task<ActionResult<CategoryDto>> Update([FromBody] CreateOrUpdateCategoryInput input) => Run(() => _service.UpdateAsync(input));
 
     [HttpDelete, Authorize(Policy = AuthorizationPolicies.Management)]
-    public Task Delete([FromQuery] int id) => _service.DeleteAsync(id);
+    public Task<IActionResult> Delete([FromQuery] int id) => Run(() => _service.DeleteAsync(id));
 }

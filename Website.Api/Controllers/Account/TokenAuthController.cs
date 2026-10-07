@@ -22,25 +22,23 @@ public class TokenAuthController : WebsiteBaseController
 
     /// <summary>Đăng nhập cửa hàng (HornViet_customer): cấp token cho mọi vai trò.</summary>
     [HttpPost]
-    public async Task<AuthenticateResultModel> Authenticate([FromBody] AuthenticateModel model)
-    {
-        var user = await _accountAppService.ValidateCredentialsAsync(model);
-        return CreateResult(user);
-    }
+    public Task<ActionResult<AuthenticateResultModel>> Authenticate([FromBody] AuthenticateModel model) =>
+        Run(async () => CreateResult(await _accountAppService.ValidateCredentialsAsync(model)));
 
     /// <summary>
     /// Đăng nhập trang quản trị (HornViet_admin): chỉ cấp token cho Nhân viên / Quản trị viên.
     /// Tài khoản Khách hàng nhận 400 và không có token.
     /// </summary>
     [HttpPost]
-    public async Task<AuthenticateResultModel> AuthenticateAdmin([FromBody] AuthenticateModel model)
-    {
-        var user = await _accountAppService.ValidateCredentialsAsync(model);
-        if (!user.Roles.Contains(nameof(RoleName.Admin)) && !user.Roles.Contains(nameof(RoleName.Staff)))
-            throw new UserFriendlyException("Tài khoản không có quyền truy cập trang quản trị.");
+    public Task<ActionResult<AuthenticateResultModel>> AuthenticateAdmin([FromBody] AuthenticateModel model) =>
+        Run(async () =>
+        {
+            var user = await _accountAppService.ValidateCredentialsAsync(model);
+            if (!user.Roles.Contains(nameof(RoleName.Admin)) && !user.Roles.Contains(nameof(RoleName.Staff)))
+                throw new UserFriendlyException("Tài khoản không có quyền truy cập trang quản trị.");
 
-        return CreateResult(user);
-    }
+            return CreateResult(user);
+        });
 
     private AuthenticateResultModel CreateResult(AuthenticatedUser user)
     {

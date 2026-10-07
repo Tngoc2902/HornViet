@@ -15,11 +15,11 @@ public class StatisticController : WebsiteBaseController
     public StatisticController(IStatisticAppService service) => _service = service;
 
     [HttpGet]
-    public Task<DashboardDto> GetDashboard() => _service.GetDashboardAsync();
+    public Task<ActionResult<DashboardDto>> GetDashboard() => Run(() => _service.GetDashboardAsync());
 
     [HttpGet, Authorize(Policy = AuthorizationPolicies.AdminOnly)]
-    public Task<RevenueReportDto> GetRevenue([FromQuery] GetRevenueInput input) => _service.GetRevenueAsync(input);
+    public Task<ActionResult<RevenueReportDto>> GetRevenue([FromQuery] GetRevenueInput input) => Run(() => _service.GetRevenueAsync(input));
 
     [HttpGet, Authorize(Policy = AuthorizationPolicies.AdminOnly)]
-    public Task<ListResultDto<TopProductDto>> GetTopProducts([FromQuery] GetTopProductsInput input) => _service.GetTopProductsAsync(input);
+    public Task<ActionResult<ListResultDto<TopProductDto>>> GetTopProducts([FromQuery] GetTopProductsInput input) => Run(() => _service.GetTopProductsAsync(input));
 }

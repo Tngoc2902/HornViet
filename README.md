@@ -87,20 +87,12 @@ dotnet user-secrets set "Smtp:FromAddress" "ten-ban@gmail.com" --project Website
 
 ### Debug bằng Visual Studio
 
-Lỗi nghiệp vụ (sai mật khẩu, hết hàng, …) được ném dưới dạng `UserFriendlyException` / `EntityNotFoundException` và
-middleware đổi thành HTTP 400 / 404. Khi chạy bằng **F5**, Visual Studio mặc định dừng ở các exception này
-("Exception User-Unhandled") trước khi middleware trả response, nên frontend phải chờ bạn bấm Continue. Đây là cài đặt
-của trình gỡ lỗi, không phải lỗi ứng dụng (`dotnet run` hoặc **Ctrl+F5** không bị). Để tắt, khi hộp thoại hiện ra lần đầu:
-bỏ chọn **"Break when this exception type is user-unhandled"** rồi bấm Continue — làm một lần cho mỗi loại exception.
-Hoặc mở **Debug → Windows → Exception Settings** (Ctrl+Alt+E), thêm hai kiểu
-`Website.Domain.SharedKernel.UserFriendlyException` và `Website.Domain.SharedKernel.EntityNotFoundException` vào
-*Common Language Runtime Exceptions*, chuột phải từng kiểu → bỏ chọn **Break When User-Unhandled**.
-
-Thêm migration khi đổi model:
-
-```bash
-dotnet ef migrations add <Ten> -p Website.Infrastructure -s Website.Api -o Persistence/Migrations
-```
+Lỗi nghiệp vụ (sai mật khẩu, hết hàng, không tìm thấy, …) được ném dưới dạng `UserFriendlyException` /
+`EntityNotFoundException` / `DbUpdateConcurrencyException`. Mọi action gọi service qua `WebsiteBaseController.Run(...)`,
+nơi lỗi được bắt ngay trong code của dự án và đổi thành HTTP 400 / 404 / 409 (`BusinessErrors.TryMap`). Nhờ vậy khi chạy
+bằng **F5**, Visual Studio không còn dừng ở "Exception User-Unhandled" mỗi lần người dùng nhập sai.
+Action mới phải viết dạng `=> Run(() => _service.XxxAsync(input))`; lỗi ném ngoài controller vẫn được
+`ExceptionHandlingMiddleware` bắt như lưới an toàn.
 
 ## Triển khai
 

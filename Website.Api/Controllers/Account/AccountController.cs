@@ -11,13 +11,13 @@ public class AccountController : WebsiteBaseController
     public AccountController(IAccountAppService accountAppService) => _accountAppService = accountAppService;
 
     [HttpPost]
-    public Task<RegisterOutput> Register([FromBody] RegisterInput input) => _accountAppService.RegisterAsync(input);
+    public Task<ActionResult<RegisterOutput>> Register([FromBody] RegisterInput input) => Run(() => _accountAppService.RegisterAsync(input));
 
     /// <summary>Gửi email chứa link đặt lại mật khẩu. Luôn trả thành công để không lộ email nào đã đăng ký.</summary>
     [HttpPost]
-    public Task ForgotPassword([FromBody] ForgotPasswordInput input) => _accountAppService.ForgotPasswordAsync(input);
+    public Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordInput input) => Run(() => _accountAppService.ForgotPasswordAsync(input));
 
     /// <summary>Đặt mật khẩu mới bằng mã trong link email (dùng một lần, hết hạn sau 30 phút).</summary>
     [HttpPost]
-    public Task ResetPassword([FromBody] ResetPasswordInput input) => _accountAppService.ResetPasswordAsync(input);
+    public Task<IActionResult> ResetPassword([FromBody] ResetPasswordInput input) => Run(() => _accountAppService.ResetPasswordAsync(input));
 }

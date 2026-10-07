@@ -13,14 +13,14 @@ public class CartController : WebsiteBaseController
     public CartController(ICartAppService service) => _service = service;
 
     [HttpGet]
-    public Task<CartDto> GetMyCart() => _service.GetMyCartAsync();
+    public Task<ActionResult<CartDto>> GetMyCart() => Run(() => _service.GetMyCartAsync());
 
     [HttpPost]
-    public Task<CartDto> AddItem([FromBody] AddCartItemInput input) => _service.AddItemAsync(input);
+    public Task<ActionResult<CartDto>> AddItem([FromBody] AddCartItemInput input) => Run(() => _service.AddItemAsync(input));
 
     [HttpPut]
-    public Task<CartDto> UpdateItem([FromBody] UpdateCartItemInput input) => _service.UpdateItemAsync(input);
+    public Task<ActionResult<CartDto>> UpdateItem([FromBody] UpdateCartItemInput input) => Run(() => _service.UpdateItemAsync(input));
 
     [HttpDelete]
-    public Task<CartDto> DeleteItem([FromQuery] int id) => _service.DeleteItemAsync(id);
+    public Task<ActionResult<CartDto>> DeleteItem([FromQuery] int id) => Run(() => _service.DeleteItemAsync(id));
 }
