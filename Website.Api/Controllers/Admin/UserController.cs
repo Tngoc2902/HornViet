@@ -32,4 +32,8 @@ public class UserController : WebsiteBaseController
     /// <summary>Khóa (isActive = false) / mở khóa (isActive = true) tài khoản.</summary>
     [HttpPut]
     public Task<UserDto> SetActive([FromBody] SetUserActiveInput input) => _service.SetActiveAsync(input);
+
+    /// <summary>Đặt lại mật khẩu cho tài khoản khác.</summary>
+    [HttpPut]
+    public Task ResetPassword([FromBody] ResetUserPasswordInput input) => _service.ResetPasswordAsync(input);
 }

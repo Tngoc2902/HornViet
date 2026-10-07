@@ -7,14 +7,16 @@ Swagger (môi trường Development): `https://localhost:44311/swagger`
 
 | Mục | Quy ước |
 |---|---|
-| Base URL | `https://localhost:44311` (HTTP: `http://localhost:21021`) — đặt vào `API_BASE_URL` |
-| Đường dẫn | `/api/services/app/{Service}/{Action}` (giống ABP), riêng đăng nhập là `/api/TokenAuth/Authenticate` |
+| Base URL | `https://localhost:44311` (HTTP: `http://localhost:21021`) — đặt vào `NEXT_PUBLIC_API_BASE_URL` của cả hai frontend |
+| Frontend | `HornViet_customer` (cửa hàng, `http://localhost:3000`) và `HornViet_admin` (quản trị, `http://localhost:3001`) gọi chung một backend |
+| CORS | Backend chỉ nhận origin có trong `App:CorsOrigins` (mặc định `http://localhost:3000,http://localhost:3001`). Origin phải khớp từng ký tự, không có `/` cuối |
+| Đường dẫn | `/api/services/app/{Service}/{Action}` (giống ABP), riêng đăng nhập là `/api/TokenAuth/Authenticate` và `/api/TokenAuth/AuthenticateAdmin` |
 | Xác thực | Header `Authorization: Bearer <accessToken>` |
 | JSON | camelCase; enum gửi/nhận dạng **số**; ngày giờ ISO 8601 theo giờ Việt Nam (`+07:00`) |
 | GET / DELETE | Tham số qua query string: `?id=1`, `?categoryIds=1&categoryIds=2` |
 | POST / PUT | Body JSON |
 | Phân trang | Input `skipCount` (mặc định 0), `maxResultCount` (mặc định 12, tối đa 100). Output `{ totalCount, items }` |
-| Ảnh | URL tương đối (`/uploads/...`) — ghép với `API_BASE_URL` khi hiển thị |
+| Ảnh | URL tương đối (`/uploads/...`) — ghép với `NEXT_PUBLIC_API_BASE_URL` khi hiển thị (thẻ `<img>` không cần CORS) |
 
 ### 1.1 Vỏ bọc response (mọi API)
 
@@ -71,12 +73,15 @@ Tài khoản demo do seed tạo (chỉ môi trường dev, đổi mật khẩu t
 
 Ký hiệu quyền: 🌐 công khai · 👤 đã đăng nhập · 🛠 Nhân viên + Quản trị viên · 👑 Quản trị viên
 
-### 2.1 Tài khoản (UC Đăng nhập, Đăng ký, Đăng xuất, Hồ sơ cá nhân)
+### 2.1 Tài khoản (UC Đăng nhập, Đăng ký, Đăng xuất, Quên mật khẩu, Hồ sơ cá nhân)
 
 | Method | Endpoint | Quyền | Body / Query | Result |
 |---|---|---|---|---|
 | POST | `/api/TokenAuth/Authenticate` | 🌐 | `{ userNameOrEmailAddress, password }` | `{ accessToken, expireInSeconds, userId, userName, name, roles[] }` |
+| POST | `/api/TokenAuth/AuthenticateAdmin` | 🌐 | Như `Authenticate` | Như `Authenticate`; tài khoản không có vai trò `Staff`/`Admin` → 400, không cấp token |
 | POST | `/api/services/app/Account/Register` | 🌐 | `{ name, emailAddress, phoneNumber, password, userName? }` | `{ userId, userName }` |
+| POST | `/api/services/app/Account/ForgotPassword` | 🌐 | `{ emailAddress }` | `null` — luôn thành công (xem bên dưới) |
+| POST | `/api/services/app/Account/ResetPassword` | 🌐 | `{ token, newPassword }` — `token` lấy từ link trong email | `null`; mã sai / đã dùng / hết hạn → 400 |
 | GET | `/api/services/app/Profile/GetMyProfile` | 👤 | — | `{ id, userName, name, emailAddress, phoneNumber, roleNames[] }` |
 | PUT | `/api/services/app/Profile/UpdateMyProfile` | 👤 | `{ name, phoneNumber }` (email không đổi được) | Profile |
 | POST | `/api/services/app/Profile/ChangePassword` | 👤 | `{ currentPassword, newPassword }` | `null` |
@@ -85,8 +90,18 @@ Ký hiệu quyền: 🌐 công khai · 👤 đã đăng nhập · 🛠 Nhân vi�
 | DELETE | `/api/services/app/Profile/DeleteAddress?id=` | 👤 | — | `null` |
 
 - **Đăng xuất**: chỉ cần xóa `accessToken` ở frontend (JWT không lưu phiên phía server). Token hết hạn sau 24 giờ.
+- **Thu hồi phiên (SecurityStamp)**: token chứa claim `sstamp`; mỗi request backend đối chiếu với `AbpUsers.SecurityStamp`. Đổi mật khẩu (`Profile/ChangePassword`), đặt lại mật khẩu (`Account/ResetPassword`, `User/ResetPassword`) hoặc đổi vai trò (`User/SetRoles`) tạo dấu mới → mọi token cũ của tài khoản đó nhận **401** ngay, kể cả phiên vừa đổi mật khẩu: frontend đăng xuất và chuyển về trang đăng nhập. Khóa tài khoản cũng cho 401 ngay.
 - Mật khẩu: ≥ 6 ký tự, có cả chữ và số. Số điện thoại: `0xxxxxxxxx` hoặc `+84xxxxxxxxx`.
-- Sau đăng nhập: nếu `roles` có `Admin` hoặc `Staff` → vào trang quản trị, ngược lại về Trang chủ.
+- Cửa hàng (`HornViet_customer`) dùng `Authenticate`; trang quản trị (`HornViet_admin`) dùng `AuthenticateAdmin` để server từ chối tài khoản Khách hàng ngay khi đăng nhập.
+- Hai frontend chạy ở hai origin khác nhau nên trình duyệt giữ hai phiên đăng nhập riêng. Quyền vẫn do backend quyết định: token Khách hàng gọi API quản trị nhận 403.
+
+**Quên mật khẩu** (trang `/forgot-password` và `/reset-password` có ở cả hai frontend):
+
+1. `ForgotPassword` luôn trả `success: true`, kể cả khi email chưa đăng ký hoặc tài khoản bị khóa — để không ai dò được email nào đã có tài khoản. Frontend hiển thị: "Nếu email đã đăng ký, chúng tôi đã gửi liên kết…".
+2. Email chứa link `{App:ClientRootAddress}/reset-password?token=...` cho Khách hàng, `{App:AdminRootAddress}/reset-password?token=...` cho Nhân viên / Quản trị viên. Tên miền lấy từ cấu hình backend, không lấy từ request.
+3. Link có hiệu lực **30 phút**, dùng **một lần**; yêu cầu mới làm link cũ mất hiệu lực. Trong 60 giây sau lần gửi, yêu cầu lặp lại cho cùng tài khoản không gửi thêm email (frontend khóa nút "Gửi lại" 60 giây).
+4. CSDL chỉ lưu SHA-256 của mã (bảng `PasswordResetTokens`). Đặt lại xong, mọi link khác của tài khoản cũng mất hiệu lực và mọi phiên đăng nhập đang mở bị đăng xuất (xem SecurityStamp bên dưới).
+5. `ResetPassword` kiểm tra độ mạnh mật khẩu trước khi dùng mã, nên mật khẩu yếu (400) không làm mất link.
 
 ### 2.2 Danh mục & Nguyên liệu (UC Quản lý danh mục)
 
@@ -242,8 +257,10 @@ Nút hành động gợi ý: Chờ xử lý → [Giao hàng] [Hủy]; Đang giao
 | POST | `/api/services/app/User/Create` | `{ name, emailAddress, userName?, phoneNumber?, password, roleNames: ["Staff"] }` — tạo tài khoản nhân viên |
 | PUT | `/api/services/app/User/SetRoles` | `{ userId, roleNames: ["Staff"] }` |
 | PUT | `/api/services/app/User/SetActive` | `{ userId, isActive }` — khóa / mở khóa |
+| PUT | `/api/services/app/User/ResetPassword` | `{ userId, newPassword }` → `null` — đặt lại mật khẩu cho tài khoản khác |
 
 Không thể tự khóa hoặc tự gỡ quyền Admin của chính mình. Tài khoản bị khóa mất phiên ngay ở request kế tiếp (401).
+`ResetPassword` không áp dụng cho chính mình (dùng `Profile/ChangePassword`); mật khẩu mới theo cùng quy tắc ≥ 6 ký tự, có cả chữ và số.
 
 ### 2.9 Thống kê & Dashboard
 
@@ -257,42 +274,17 @@ Doanh thu chỉ tính đơn **Hoàn thành**, theo ngày đặt hàng. `items` c
 
 ---
 
-## 3. Gợi ý cấu hình axios (src/api/http.js)
+## 3. HTTP client ở frontend
 
-```js
-import axios from "axios";
+Cả hai repo (Next.js) dùng chung một client `lib/api/http.ts` (fetch, không dùng axios) và `lib/api/services.ts`:
 
-const http = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL ?? process.env.API_BASE_URL });
+| Mục | Cách làm |
+|---|---|
+| Base URL | `NEXT_PUBLIC_API_BASE_URL` trong `.env.local` (dev: `http://localhost:21021`) |
+| Token | Lưu ở `localStorage`, gửi `Authorization: Bearer <token>`. Hai origin 3000 / 3001 có `localStorage` riêng nên hai phiên độc lập |
+| Response | Trả thẳng `result`; lỗi chuẩn hóa thành `ApiError { status, message, details, validationErrors }`, `fieldErrors()` gom lỗi theo `members` |
+| 401 | Xóa token, quay về `/login` |
+| Mảng trong query | Lặp tên: `categoryIds=1&categoryIds=2` |
 
-http.interceptors.request.use((config) => {
-  const token = localStorage.getItem("accessToken");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-http.interceptors.response.use(
-  (res) => res.data.result,                       // trả thẳng "result"
-  (err) => {
-    const body = err.response?.data;
-    if (err.response?.status === 401) {
-      localStorage.removeItem("accessToken");
-      window.location.href = "/login";
-    }
-    return Promise.reject({
-      status: err.response?.status,
-      message: body?.error?.message ?? "Không kết nối được máy chủ.",
-      details: body?.error?.details,
-      validationErrors: body?.error?.validationErrors ?? [],
-    });
-  }
-);
-
-export default http;
-
-// Ví dụ
-// const page = await http.get("/api/services/app/Product/GetAll", {
-//   params: { categoryIds: [1, 2], sorting: 1, maxResultCount: 12 },
-//   paramsSerializer: { indexes: null },          // categoryIds=1&categoryIds=2
-// });
-// await http.post("/api/services/app/Cart/AddItem", { productVariantId: 1, quantity: 1 });
-```
+Khác biệt duy nhất giữa hai repo trong `services.ts`: trang quản trị đăng nhập qua `/api/TokenAuth/AuthenticateAdmin`
+và có thêm `userApi.resetPassword`. Khi backend đổi API, cập nhật `lib/api` ở cả hai repo.

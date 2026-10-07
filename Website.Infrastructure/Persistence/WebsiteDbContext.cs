@@ -27,6 +27,7 @@ public class WebsiteDbContext : DbContext, IUnitOfWork
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<UserAddress> UserAddresses => Set<UserAddress>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -130,6 +131,9 @@ public class WebsiteDbContext : DbContext, IUnitOfWork
             e.Property(x => x.Password).HasMaxLength(128).IsRequired();
             e.Property(x => x.PhoneNumber).HasMaxLength(32);
             e.Property(x => x.IsActive).HasDefaultValue(true);
+            // Mặc định ở CSDL: tài khoản đã có (khi thêm cột) và bản ghi chèn bằng script SQL cũng có dấu bảo mật.
+            e.Property(x => x.SecurityStamp).HasMaxLength(32).IsUnicode(false).IsRequired()
+                .HasDefaultValueSql("REPLACE(CONVERT(char(36), NEWID()), '-', '')");
             e.HasIndex(x => x.UserName).IsUnique().HasFilter("[IsDeleted] = 0");
             e.HasIndex(x => x.EmailAddress).IsUnique().HasFilter("[IsDeleted] = 0");
             e.HasMany(x => x.Roles).WithOne().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
@@ -157,6 +161,16 @@ public class WebsiteDbContext : DbContext, IUnitOfWork
             e.Property(x => x.ReceiverName).HasMaxLength(255).IsRequired();
             e.Property(x => x.PhoneNumber).HasMaxLength(20).IsUnicode(false).IsRequired();
             e.Property(x => x.Address).HasMaxLength(500).IsRequired();
+        });
+
+        // UC Quên mật khẩu: chỉ lưu SHA-256 của mã (hex 64 ký tự). Mã thuộc về tài khoản nên xóa dây chuyền theo User.
+        b.Entity<PasswordResetToken>(e =>
+        {
+            e.ToTable("PasswordResetTokens");
+            e.Property(x => x.TokenHash).HasMaxLength(64).IsUnicode(false).IsFixedLength().IsRequired();
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.HasIndex(x => new { x.UserId, x.CreationTime });
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Hệ thống lưu giờ địa phương (giờ Việt Nam); đánh dấu Kind = Local khi đọc ra để JSON luôn có offset +07:00.

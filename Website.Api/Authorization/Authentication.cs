@@ -34,6 +34,9 @@ public static class AuthorizationPolicies
 
 public class TokenService
 {
+    /// <summary>Claim chứa User.SecurityStamp — đổi mật khẩu / vai trò làm token cũ mất hiệu lực.</summary>
+    public const string SecurityStampClaim = "sstamp";
+
     private readonly JwtOptions _options;
 
     public TokenService(IOptions<JwtOptions> options) => _options = options.Value;
@@ -45,7 +48,8 @@ public class TokenService
             new(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
             new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
             new(ClaimTypes.Name, user.UserName),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(SecurityStampClaim, user.SecurityStamp)
         };
         claims.AddRange(user.Roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
@@ -110,13 +114,15 @@ public static class AuthenticationSetup
                 };
                 options.Events = new JwtBearerEvents
                 {
-                    // Tài khoản bị khóa / xóa thì token đã cấp mất hiệu lực ngay.
+                    // Token mất hiệu lực ngay khi tài khoản bị khóa / xóa, hoặc khi SecurityStamp đã đổi
+                    // (đổi / đặt lại mật khẩu, đổi vai trò). Token phát hành trước khi có claim này cũng bị từ chối.
                     OnTokenValidated = async ctx =>
                     {
                         var userIdValue = ctx.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                        var stamp = ctx.Principal?.FindFirstValue(TokenService.SecurityStampClaim);
                         var users = ctx.HttpContext.RequestServices.GetRequiredService<IRepository<User, long>>();
-                        var active = long.TryParse(userIdValue, out var userId) &&
-                                     await users.GetAll().AnyAsync(u => u.Id == userId && u.IsActive);
+                        var active = long.TryParse(userIdValue, out var userId) && stamp != null &&
+                                     await users.GetAll().AnyAsync(u => u.Id == userId && u.IsActive && u.SecurityStamp == stamp);
                         if (!active)
                             ctx.Fail("Tài khoản không còn hoạt động.");
                     },

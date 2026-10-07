@@ -1,6 +1,8 @@
+using Website.Application.Common;
 using Website.Domain.Interfaces.Repositories;
 using Website.Infrastructure.Persistence;
 using Website.Infrastructure.Persistence.Repositories;
+using Website.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
@@ -15,7 +17,17 @@ public static class DependencyInjectionRegister
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Thiếu ConnectionStrings:Default.");
 
-        return services.AddPersistence(connectionString);
+        return services
+            .AddPersistence(connectionString)
+            .AddEmail(configuration);
+    }
+
+    /// <summary>Gửi email qua SMTP (mục "Smtp"); Host trống thì lưu email thành file .eml để thử ở môi trường dev.</summary>
+    public static IServiceCollection AddEmail(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<SmtpOptions>(configuration.GetSection("Smtp"));
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        return services;
     }
 
     public static IServiceCollection AddPersistence(this IServiceCollection services, string connectionString)

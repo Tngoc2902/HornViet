@@ -406,3 +406,70 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006103643_AddPasswordResetTokens'
+)
+BEGIN
+    CREATE TABLE [PasswordResetTokens] (
+        [Id] bigint NOT NULL IDENTITY,
+        [UserId] bigint NOT NULL,
+        [TokenHash] char(64) NOT NULL,
+        [ExpirationTime] datetime2 NOT NULL,
+        [UsedTime] datetime2 NULL,
+        [CreationTime] datetime2 NOT NULL,
+        CONSTRAINT [PK_PasswordResetTokens] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_PasswordResetTokens_AbpUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [AbpUsers] ([Id]) ON DELETE CASCADE
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006103643_AddPasswordResetTokens'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_PasswordResetTokens_TokenHash] ON [PasswordResetTokens] ([TokenHash]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006103643_AddPasswordResetTokens'
+)
+BEGIN
+    CREATE INDEX [IX_PasswordResetTokens_UserId_CreationTime] ON [PasswordResetTokens] ([UserId], [CreationTime]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006103643_AddPasswordResetTokens'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261006103643_AddPasswordResetTokens', N'10.0.9');
+END;
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007021638_AddUserSecurityStamp'
+)
+BEGIN
+    ALTER TABLE [AbpUsers] ADD [SecurityStamp] varchar(32) NOT NULL DEFAULT (REPLACE(CONVERT(char(36), NEWID()), '-', ''));
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007021638_AddUserSecurityStamp'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261007021638_AddUserSecurityStamp', N'10.0.9');
+END;
+
+COMMIT;
+GO
+

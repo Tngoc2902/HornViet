@@ -4,3 +4,5 @@ obj/
 *.user
 Website.Api/wwwroot/uploads/*
 !Website.Api/wwwroot/uploads/sample/
+# Email lưu thành file .eml khi chưa cấu hình Smtp:Host (chứa link đặt lại mật khẩu)
+Website.Api/App_Data/

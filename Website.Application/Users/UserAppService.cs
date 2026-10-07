@@ -73,6 +73,14 @@ public class SetUserActiveInput
     public bool IsActive { get; set; }
 }
 
+public class ResetUserPasswordInput
+{
+    public long UserId { get; set; }
+
+    [Required(ErrorMessage = "Vui lòng nhập mật khẩu mới.")]
+    public string NewPassword { get; set; } = null!;
+}
+
 public interface IUserAppService
 {
     Task<PagedResultDto<UserDto>> GetAllAsync(GetUsersInput input);
@@ -81,6 +89,7 @@ public interface IUserAppService
     Task<UserDto> CreateAsync(CreateUserInput input);
     Task<UserDto> SetRolesAsync(SetUserRolesInput input);
     Task<UserDto> SetActiveAsync(SetUserActiveInput input);
+    Task ResetPasswordAsync(ResetUserPasswordInput input);
 }
 
 public class UserAppService : IUserAppService
@@ -182,13 +191,19 @@ public class UserAppService : IUserAppService
         if (user.Id == _session.GetUserId() && roles.All(r => r.Name != StaticRoleNames.Admin))
             throw new UserFriendlyException("Bạn không thể tự gỡ quyền Quản trị viên của chính mình.");
 
-        foreach (var ur in user.Roles.Where(ur => roles.All(r => r.Id != ur.RoleId)).ToList())
+        var removed = user.Roles.Where(ur => roles.All(r => r.Id != ur.RoleId)).ToList();
+        foreach (var ur in removed)
         {
             user.Roles.Remove(ur);
             _userRoleRepository.Delete(ur);
         }
-        foreach (var role in roles.Where(r => user.Roles.All(ur => ur.RoleId != r.Id)))
+        var added = roles.Where(r => user.Roles.All(ur => ur.RoleId != r.Id)).ToList();
+        foreach (var role in added)
             user.Roles.Add(new UserRole { RoleId = role.Id, Role = role });
+
+        // Token cũ còn mang vai trò cũ: thu hồi để người dùng đăng nhập lại và nhận quyền mới.
+        if (removed.Count > 0 || added.Count > 0)
+            user.RotateSecurityStamp();
 
         await _unitOfWork.SaveChangesAsync();
         return ToDto(user);
@@ -204,6 +219,19 @@ public class UserAppService : IUserAppService
         user.IsActive = input.IsActive;
         await _unitOfWork.SaveChangesAsync();
         return ToDto(user);
+    }
+
+    /// <summary>Quản trị viên đặt lại mật khẩu cho tài khoản khác (VD nhân viên quên mật khẩu).</summary>
+    public async Task ResetPasswordAsync(ResetUserPasswordInput input)
+    {
+        if (input.UserId == _session.GetUserId())
+            throw new UserFriendlyException("Hãy dùng chức năng Đổi mật khẩu để đổi mật khẩu của chính bạn.");
+
+        PasswordPolicy.Validate(input.NewPassword);
+        var user = await LoadUserAsync(input.UserId);
+        user.Password = _passwordHasher.HashPassword(user, input.NewPassword);
+        user.RotateSecurityStamp(); // mọi phiên đăng nhập cũ của tài khoản đó mất hiệu lực
+        await _unitOfWork.SaveChangesAsync();
     }
 
     private async Task<List<Role>> ResolveRolesAsync(IEnumerable<string> roleNames)
