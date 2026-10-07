@@ -6,14 +6,10 @@ using Website.Domain.Orders.Entities;
 using Website.Domain.SharedKernel;
 using Website.Domain.Users.Entities;
 using Microsoft.EntityFrameworkCore;
+using Website.Application.Statistics.Enums;
+using Website.Domain.Orders.Enums;
 
 namespace Website.Application.Statistics;
-
-public enum RevenueGroupBy
-{
-    Day = 0,
-    Month = 1
-}
 
 public class GetRevenueInput
 {

@@ -6,6 +6,8 @@ using Website.Domain.Interfaces.Repositories;
 using Website.Domain.Orders.Entities;
 using Website.Domain.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Website.Application.Catalog.Enums;
+using Website.Domain.Orders.Enums;
 
 namespace Website.Application.Catalog;
 

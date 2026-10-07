@@ -1,5 +1,6 @@
 using Website.Domain.Orders.Entities;
 using Website.Domain.SharedKernel;
+using Website.Domain.Orders.Enums;
 
 namespace Website.Domain.UnitTests.Orders;
 
