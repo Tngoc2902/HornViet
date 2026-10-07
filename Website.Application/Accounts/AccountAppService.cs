@@ -267,7 +267,7 @@ public class AccountAppService : IAccountAppService
         catch (Exception ex)
         {
             // Không báo lỗi ra ngoài (sẽ lộ email này có tồn tại); thu hồi mã để người dùng gửi lại được ngay.
-            _logger.LogError(ex, "Không gửi được email đặt lại mật khẩu cho người dùng {UserId}", user.Id);
+            _logger.LogError(ex, "Không gửi được email đặt lại mật khẩu cho người dùng {UserId}. Kiểm tra mục Smtp (Host, UserName, Password — Gmail cần App Password)", user.Id);
             token.Revoke(now);
             await _unitOfWork.SaveChangesAsync();
         }
