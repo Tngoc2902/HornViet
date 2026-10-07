@@ -14,8 +14,19 @@ public class User : Entity<long>, IHasCreationTime, ISoftDelete
     public DateTime CreationTime { get; set; }
     public bool IsDeleted { get; set; }
 
+    /// <summary>
+    /// Dấu bảo mật, nhúng vào JWT khi đăng nhập. Mỗi request đối chiếu dấu trong token với giá trị này;
+    /// đổi / đặt lại mật khẩu hoặc đổi vai trò sẽ tạo dấu mới nên mọi token phát hành trước đó mất hiệu lực ngay.
+    /// </summary>
+    public string SecurityStamp { get; private set; } = NewSecurityStamp();
+
     public List<UserRole> Roles { get; set; } = new();
     public List<UserAddress> Addresses { get; set; } = new();
+
+    /// <summary>Thu hồi mọi phiên đăng nhập hiện có của tài khoản (token cũ không còn hợp lệ).</summary>
+    public void RotateSecurityStamp() => SecurityStamp = NewSecurityStamp();
+
+    private static string NewSecurityStamp() => Guid.NewGuid().ToString("N");
 }
 
 /// <summary>Vai trò (bảng AbpRoles).</summary>

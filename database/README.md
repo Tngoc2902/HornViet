@@ -5,7 +5,7 @@ Ba script tạo lại toàn bộ database trên SQL Server 2019 trở lên, khô
 | File | Nội dung |
 |---|---|
 | `01_create_database.sql` | Tạo database `HonSungVietDb`, collation `Latin1_General_100_CI_AI` |
-| `02_schema.sql` | 13 bảng + khóa, chỉ mục (sinh từ EF Core migration, chạy lại an toàn) |
+| `02_schema.sql` | 14 bảng (kể cả `PasswordResetTokens` cho Quên mật khẩu) + khóa, chỉ mục (sinh từ EF Core migration, chạy lại an toàn) |
 | `03_seed.sql` | Vai trò, tài khoản demo, 6 danh mục, 2 nguyên liệu, 7 sản phẩm, 12 biến thể (bỏ qua nếu đã có dữ liệu) |
 
 ## Cách 1 — SQL Server Management Studio

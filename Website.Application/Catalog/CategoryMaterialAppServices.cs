@@ -7,8 +7,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Website.Application.Catalog;
 
-// ----------------------------- Danh mục -----------------------------
-
 public class CategoryDto
 {
     public int Id { get; set; }
@@ -115,7 +113,6 @@ public class CategoryAppService : ICategoryAppService
     }
 }
 
-// ----------------------------- Nguyên liệu -----------------------------
 
 public class MaterialDto
 {

@@ -111,6 +111,7 @@ public class ProfileAppService : IProfileAppService
 
         PasswordPolicy.Validate(input.NewPassword);
         user.Password = _passwordHasher.HashPassword(user, input.NewPassword);
+        user.RotateSecurityStamp(); // đăng xuất mọi phiên (kể cả phiên hiện tại) — frontend yêu cầu đăng nhập lại
         await _unitOfWork.SaveChangesAsync();
     }
 
