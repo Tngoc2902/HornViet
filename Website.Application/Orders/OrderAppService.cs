@@ -8,6 +8,7 @@ using Website.Domain.Orders.Entities;
 using Website.Domain.SharedKernel;
 using Website.Domain.Users.Entities;
 using Microsoft.EntityFrameworkCore;
+using Website.Domain.Orders.Enums;
 
 namespace Website.Application.Orders;
 

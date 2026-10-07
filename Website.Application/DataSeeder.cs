@@ -3,6 +3,7 @@ using Website.Domain.Interfaces.Repositories;
 using Website.Domain.Users.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Website.Domain.Users.Enums;
 
 namespace Website.Application;
 
@@ -44,8 +45,8 @@ public class DataSeeder
     public async Task SeedAsync(SeedOptions options)
     {
         await SeedRolesAsync();
-        await SeedUserAsync("admin", "Quản trị viên", "admin@honsungviet.local", options.AdminPassword, StaticRoleNames.Admin);
-        await SeedUserAsync("staff", "Nhân viên", "staff@honsungviet.local", options.StaffPassword, StaticRoleNames.Staff);
+        await SeedUserAsync("admin", "Quản trị viên", "admin@honsungviet.local", options.AdminPassword, nameof(RoleName.Admin));
+        await SeedUserAsync("staff", "Nhân viên", "staff@honsungviet.local", options.StaffPassword, nameof(RoleName.Staff));
         if (options.SampleCatalog)
             await SeedCatalogAsync();
     }
@@ -54,9 +55,9 @@ public class DataSeeder
     {
         var wanted = new[]
         {
-            (StaticRoleNames.Admin, "Quản trị viên"),
-            (StaticRoleNames.Staff, "Nhân viên"),
-            (StaticRoleNames.Customer, "Khách hàng")
+            (nameof(RoleName.Admin), "Quản trị viên"),
+            (nameof(RoleName.Staff), "Nhân viên"),
+            (nameof(RoleName.Customer), "Khách hàng")
         };
         var existing = await _roles.GetAll().Select(r => r.Name).ToListAsync();
         foreach (var (name, display) in wanted.Where(w => !existing.Contains(w.Item1)))

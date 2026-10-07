@@ -1,20 +1,7 @@
 using Website.Domain.SharedKernel;
+using Website.Domain.Orders.Enums;
 
 namespace Website.Domain.Orders.Entities;
-
-public enum OrderStatus
-{
-    Pending = 0,    // Chờ xử lý
-    Shipping = 1,   // Đang giao
-    Completed = 2,  // Hoàn thành
-    Canceled = 3    // Đã hủy
-}
-
-public enum PaymentMethod
-{
-    COD = 0,          // Thanh toán khi nhận hàng
-    BankTransfer = 1  // Chuyển khoản (chỉ ghi nhận, chưa tích hợp cổng thanh toán)
-}
 
 /// <summary>Aggregate root đơn hàng: giữ máy trạng thái và tổng tiền.</summary>
 public class Order : Entity<int>, IHasCreationTime

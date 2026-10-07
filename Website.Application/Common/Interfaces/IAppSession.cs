@@ -1,7 +1,7 @@
 // Website.Domain.SharedKernel: chứa UserFriendlyException (lỗi nghiệp vụ → HTTP 400).
 using Website.Domain.SharedKernel;
-// Website.Domain.Users.Entities: chứa StaticRoleNames (tên các vai trò Admin / Staff / Customer).
-using Website.Domain.Users.Entities;
+// Website.Domain.Users.Enums: chứa enum RoleName (các vai trò Admin / Staff / Customer).
+using Website.Domain.Users.Enums;
 
 namespace Website.Application.Common;
 
@@ -20,7 +20,7 @@ public interface IAppSession
     long? UserId { get; }
 
     /// <summary>Kiểm tra người dùng hiện tại có vai trò roleName hay không (dựa trên claim Role trong JWT).</summary>
-    /// <param name="roleName">Tên vai trò, ví dụ StaticRoleNames.Admin.</param>
+    /// <param name="roleName">Tên vai trò, ví dụ "Admin"; nên dùng overload IsInRole(RoleName) bên dưới.</param>
     /// <returns>true nếu token có vai trò đó; false nếu không có hoặc chưa đăng nhập.</returns>
     bool IsInRole(string roleName);
 }
@@ -49,6 +49,9 @@ public static class AppSessionExtensions
     /// <param name="session">Phiên đăng nhập hiện tại.</param>
     /// <returns>true nếu người dùng có vai trò Admin hoặc Staff.</returns>
     // "||" là phép HOẶC logic: chỉ cần có một trong hai vai trò là đủ.
+    /// <summary>Kiểm tra vai trò theo enum (an toàn kiểu, không phải gõ chuỗi).</summary>
+    public static bool IsInRole(this IAppSession session, RoleName role) => session.IsInRole(role.ToString());
+
     public static bool IsManagement(this IAppSession session) =>
-        session.IsInRole(StaticRoleNames.Admin) || session.IsInRole(StaticRoleNames.Staff);
+        session.IsInRole(RoleName.Admin) || session.IsInRole(RoleName.Staff);
 }

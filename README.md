@@ -11,8 +11,10 @@ Cấu trúc DDD theo chuẩn của pixelz-api:
 SharedKernel/                    Khối dựng dùng chung: Entity<TKey>, ValueObject, IHasCreationTime, ISoftDelete, UserFriendlyException
 Website.Domain/                  Tầng Miền
   {Module}/Entities/             Catalog, Carts, Orders, Users — entity + quy tắc nghiệp vụ (tồn kho theo biến thể, máy trạng thái đơn)
+  {Module}/Enums/                Enum nghiệp vụ của module, mỗi enum một file (VD Orders/Enums/OrderStatus.cs)
   Interfaces/Repositories/       IRepository<TEntity, TKey>, IUnitOfWork
 Website.Application/             Tầng Ứng dụng: Application Service + DTO cho từng use case, DataSeeder
+  {Module}/Enums/                Enum của tham số đầu vào (VD Catalog/Enums/ProductSorting.cs)
   Common/Interfaces/             IAppSession
 Website.Infrastructure/          Tầng Hạ tầng
   Persistence/                   WebsiteDbContext, Migrations/, Repositories/

@@ -58,9 +58,3 @@ public class UserAddress : Entity<int>, IHasCreationTime
     public DateTime CreationTime { get; set; }
 }
 
-public static class StaticRoleNames
-{
-    public const string Admin = "Admin";       // Quản trị viên
-    public const string Staff = "Staff";       // Nhân viên
-    public const string Customer = "Customer"; // Khách hàng
-}
