@@ -200,8 +200,11 @@ Biểu tượng giỏ trên header dùng `totalQuantity`.
   "items": [{ "id": 1, "productVariantId": 1, "productName": "...", "variantName": "Nhỏ / Răng thưa", "quantity": 2, "unitPrice": 180000, "lineTotal": 360000 }]
 }
 // OrderListItem
-{ "id": 1, "code": "HSV000001", "creationTime": "...", "status": 0, "paymentMethod": 0, "totalAmount": 360000, "itemCount": 2, "receiverName": "...", "canCancel": true }
+{ "id": 1, "code": "HSV000001", "creationTime": "...", "status": 0, "paymentMethod": 0, "totalAmount": 360000, "itemCount": 2, "receiverName": "...", "canCancel": true,
+  "items": [{ "productName": "...", "variantName": "Nhỏ / Răng thưa", "quantity": 2 }] }
 ```
+
+`OrderListItem.items` (dùng cho `GetMyOrders` và `GetAll`) chỉ gồm tên sản phẩm, tên biến thể, số lượng — để danh sách đơn hiện được đơn bán sản phẩm gì mà không phải gọi `Order/Get` từng đơn.
 
 Gợi ý: điền sẵn form thanh toán từ địa chỉ mặc định (`Profile/GetMyAddresses`).
 

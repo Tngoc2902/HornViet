@@ -53,6 +53,15 @@ public class OrderListItemDto
     public int ItemCount { get; set; }
     public string ReceiverName { get; set; } = null!;
     public bool CanCancel { get; set; }
+    /// <summary>Các sản phẩm trong đơn (tên, biến thể, số lượng) để danh sách đơn hiện được đơn bán gì.</summary>
+    public List<OrderLineSummaryDto> Items { get; set; } = [];
+}
+
+public class OrderLineSummaryDto
+{
+    public string ProductName { get; set; } = null!;
+    public string VariantName { get; set; } = null!;
+    public int Quantity { get; set; }
 }
 
 public class OrderDto
@@ -284,7 +293,10 @@ public class OrderAppService : IOrderAppService
             .Select(o => new
             {
                 o.Id, o.CreationTime, o.Status, o.PaymentMethod, o.TotalAmount, o.ReceiverName,
-                ItemCount = o.Items.Sum(i => i.Quantity)
+                ItemCount = o.Items.Sum(i => i.Quantity),
+                Lines = o.Items.OrderBy(i => i.Id)
+                    .Select(i => new OrderLineSummaryDto { ProductName = i.ProductName, VariantName = i.VariantName, Quantity = i.Quantity })
+                    .ToList()
             })
             .ToListAsync();
 
@@ -298,7 +310,8 @@ public class OrderAppService : IOrderAppService
             TotalAmount = o.TotalAmount,
             ItemCount = o.ItemCount,
             ReceiverName = o.ReceiverName,
-            CanCancel = o.Status == OrderStatus.Pending
+            CanCancel = o.Status == OrderStatus.Pending,
+            Items = o.Lines
         }).ToList();
 
         return new PagedResultDto<OrderListItemDto>(totalCount, items);
