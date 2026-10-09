@@ -176,7 +176,8 @@ public class OrderAppService : IOrderAppService
         {
             var variant = item.ProductVariant;
             variant.DecreaseStock(item.Quantity);
-            order.AddItem(variant.Id, variant.Product.Name, variant.DisplayName, item.Quantity, variant.Product.Price);
+            order.AddItem(variant.Id, variant.Product.Name, variant.DisplayName, item.Quantity, variant.Product.Price,
+                variant.AverageCost); // giá vốn lúc bán → tính lợi nhuận (null nếu biến thể chưa có phiếu nhập)
             _cartItemRepository.Delete(item);
         }
 

@@ -26,6 +26,12 @@ public class RevenuePointDto
     public DateTime Period { get; set; }
     public decimal Revenue { get; set; }
     public int OrderCount { get; set; }
+    /// <summary>Giá vốn của các sản phẩm đã bán có giá vốn (chỉ Quản trị viên xem).</summary>
+    public decimal Cost { get; set; }
+    /// <summary>Lợi nhuận gộp = Σ (giá bán − giá vốn) × số lượng, chỉ trên sản phẩm có giá vốn.</summary>
+    public decimal Profit { get; set; }
+    /// <summary>Số sản phẩm đã bán chưa có giá vốn (đơn trước khi có chức năng nhập kho) — không tính vào lợi nhuận.</summary>
+    public int UncostedQuantity { get; set; }
 }
 
 public class RevenueReportDto
@@ -34,6 +40,11 @@ public class RevenueReportDto
     public DateTime ToDate { get; set; }
     public decimal TotalRevenue { get; set; }
     public int OrderCount { get; set; }
+    public decimal TotalCost { get; set; }
+    public decimal TotalProfit { get; set; }
+    /// <summary>Tỷ suất lợi nhuận (%) = lợi nhuận / doanh thu của các sản phẩm có giá vốn; null nếu chưa có giá vốn nào.</summary>
+    public decimal? ProfitMargin { get; set; }
+    public int UncostedQuantity { get; set; }
     public IReadOnlyList<RevenuePointDto> Items { get; set; } = Array.Empty<RevenuePointDto>();
 }
 
@@ -50,6 +61,8 @@ public class TopProductDto
     public string ProductName { get; set; } = null!;
     public int QuantitySold { get; set; }
     public decimal Revenue { get; set; }
+    public decimal Profit { get; set; }
+    public int UncostedQuantity { get; set; }
 }
 
 public class LowStockVariantDto
@@ -70,6 +83,8 @@ public class DashboardDto
     /// <summary>Doanh thu chỉ trả về cho Quản trị viên (null với Nhân viên).</summary>
     public decimal? TodayRevenue { get; set; }
     public decimal? MonthRevenue { get; set; }
+    /// <summary>Lợi nhuận gộp tháng này — chỉ trả về cho Quản trị viên (null với Nhân viên).</summary>
+    public decimal? MonthProfit { get; set; }
     public IReadOnlyList<LowStockVariantDto> LowStockVariants { get; set; } = Array.Empty<LowStockVariantDto>();
 }
 
@@ -123,12 +138,34 @@ public class StatisticAppService : IStatisticAppService
         }
 
         items = items.OrderBy(i => i.Period).ToList();
+
+        // Giá vốn / lợi nhuận: lấy từng dòng đơn đã hoàn thành trong kỳ rồi gom theo cùng kỳ với doanh thu.
+        var lines = await (from oi in _orderItemRepository.GetAll()
+                           join o in completed on oi.OrderId equals o.Id
+                           select new { o.CreationTime, oi.Quantity, oi.UnitPrice, oi.UnitCost }).ToListAsync();
+        var byPeriod = lines.ToLookup(l => input.GroupBy == RevenueGroupBy.Month
+            ? new DateTime(l.CreationTime.Year, l.CreationTime.Month, 1, 0, 0, 0, DateTimeKind.Local)
+            : DateTime.SpecifyKind(l.CreationTime.Date, DateTimeKind.Local));
+        foreach (var point in items)
+        {
+            var periodLines = byPeriod[DateTime.SpecifyKind(point.Period, DateTimeKind.Local)].ToList();
+            point.Cost = periodLines.Where(l => l.UnitCost != null).Sum(l => l.UnitCost!.Value * l.Quantity);
+            point.Profit = periodLines.Where(l => l.UnitCost != null).Sum(l => (l.UnitPrice - l.UnitCost!.Value) * l.Quantity);
+            point.UncostedQuantity = periodLines.Where(l => l.UnitCost == null).Sum(l => l.Quantity);
+        }
+        var costedRevenue = lines.Where(l => l.UnitCost != null).Sum(l => l.UnitPrice * l.Quantity);
+        var totalProfit = items.Sum(i => i.Profit);
+
         return new RevenueReportDto
         {
             FromDate = from,
             ToDate = toExclusive.AddDays(-1),
             TotalRevenue = items.Sum(i => i.Revenue),
             OrderCount = items.Sum(i => i.OrderCount),
+            TotalCost = items.Sum(i => i.Cost),
+            TotalProfit = totalProfit,
+            ProfitMargin = costedRevenue > 0 ? Math.Round(totalProfit / costedRevenue * 100, 1) : null,
+            UncostedQuantity = items.Sum(i => i.UncostedQuantity),
             Items = items
         };
     }
@@ -152,7 +189,9 @@ public class StatisticAppService : IStatisticAppService
                     ProductId = g.Key,
                     ProductName = g.Max(x => x.ProductName)!,
                     QuantitySold = g.Sum(x => x.Quantity),
-                    Revenue = g.Sum(x => x.UnitPrice * x.Quantity)
+                    Revenue = g.Sum(x => x.UnitPrice * x.Quantity),
+                    Profit = g.Sum(x => x.UnitCost != null ? (x.UnitPrice - x.UnitCost.Value) * x.Quantity : 0),
+                    UncostedQuantity = g.Sum(x => x.UnitCost == null ? x.Quantity : 0)
                 })
             .OrderByDescending(x => x.QuantitySold).ThenByDescending(x => x.Revenue)
             .Take(top)
@@ -194,6 +233,10 @@ public class StatisticAppService : IStatisticAppService
         {
             dto.TodayRevenue = await CompletedOrders(today, today.AddDays(1)).SumAsync(o => (decimal?)o.TotalAmount) ?? 0;
             dto.MonthRevenue = await CompletedOrders(monthStart, monthStart.AddMonths(1)).SumAsync(o => (decimal?)o.TotalAmount) ?? 0;
+            dto.MonthProfit = await (from oi in _orderItemRepository.GetAll()
+                                     join o in CompletedOrders(monthStart, monthStart.AddMonths(1)) on oi.OrderId equals o.Id
+                                     where oi.UnitCost != null
+                                     select (decimal?)((oi.UnitPrice - oi.UnitCost!.Value) * oi.Quantity)).SumAsync() ?? 0;
         }
         return dto;
     }

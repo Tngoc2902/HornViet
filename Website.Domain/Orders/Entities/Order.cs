@@ -36,7 +36,9 @@ public class Order : Entity<int>, IHasCreationTime
     /// <summary>Mã đơn hiển thị cho khách, VD: HSV000123.</summary>
     public static string FormatCode(int id) => $"HSV{id:D6}";
 
-    public void AddItem(int productVariantId, string productName, string variantName, int quantity, decimal unitPrice)
+    /// <param name="unitCost">Giá vốn bình quân của biến thể lúc bán (null = chưa có giá vốn).</param>
+    public void AddItem(int productVariantId, string productName, string variantName, int quantity, decimal unitPrice,
+        decimal? unitCost = null)
     {
         Items.Add(new OrderItem
         {
@@ -44,7 +46,8 @@ public class Order : Entity<int>, IHasCreationTime
             ProductName = productName,
             VariantName = variantName,
             Quantity = quantity,
-            UnitPrice = unitPrice
+            UnitPrice = unitPrice,
+            UnitCost = unitCost
         });
         TotalAmount = Items.Sum(i => i.UnitPrice * i.Quantity);
     }
@@ -83,4 +86,10 @@ public class OrderItem : Entity<int>
 
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
+
+    /// <summary>
+    /// Giá vốn một sản phẩm lúc bán (chụp từ ProductVariant.AverageCost) — để tính lợi nhuận.
+    /// null = đơn bán trước khi có chức năng nhập kho, hoặc biến thể chưa có phiếu nhập.
+    /// </summary>
+    public decimal? UnitCost { get; set; }
 }

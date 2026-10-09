@@ -473,3 +473,79 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261009084805_AddStockReceiptsAndCost'
+)
+BEGIN
+    ALTER TABLE [ProductVariants] ADD [AverageCost] decimal(18,4) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261009084805_AddStockReceiptsAndCost'
+)
+BEGIN
+    ALTER TABLE [OrderItems] ADD [UnitCost] decimal(18,4) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261009084805_AddStockReceiptsAndCost'
+)
+BEGIN
+    CREATE TABLE [StockReceipts] (
+        [Id] int NOT NULL IDENTITY,
+        [ProductVariantId] int NOT NULL,
+        [Quantity] int NOT NULL,
+        [UnitCost] decimal(18,2) NOT NULL,
+        [Note] nvarchar(500) NULL,
+        [StockBefore] int NOT NULL,
+        [AverageCostBefore] decimal(18,4) NULL,
+        [CreatorUserId] bigint NOT NULL,
+        [CreationTime] datetime2 NOT NULL,
+        [LastModificationTime] datetime2 NULL,
+        [LastModifierUserId] bigint NULL,
+        CONSTRAINT [PK_StockReceipts] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_StockReceipts_AbpUsers_CreatorUserId] FOREIGN KEY ([CreatorUserId]) REFERENCES [AbpUsers] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_StockReceipts_ProductVariants_ProductVariantId] FOREIGN KEY ([ProductVariantId]) REFERENCES [ProductVariants] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261009084805_AddStockReceiptsAndCost'
+)
+BEGIN
+    CREATE INDEX [IX_StockReceipts_CreationTime] ON [StockReceipts] ([CreationTime]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261009084805_AddStockReceiptsAndCost'
+)
+BEGIN
+    CREATE INDEX [IX_StockReceipts_CreatorUserId] ON [StockReceipts] ([CreatorUserId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261009084805_AddStockReceiptsAndCost'
+)
+BEGIN
+    CREATE INDEX [IX_StockReceipts_ProductVariantId_Id] ON [StockReceipts] ([ProductVariantId], [Id]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261009084805_AddStockReceiptsAndCost'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261009084805_AddStockReceiptsAndCost', N'10.0.9');
+END;
+
+COMMIT;
+GO
+
