@@ -10,7 +10,7 @@ Cấu trúc DDD theo chuẩn của pixelz-api:
 ```
 SharedKernel/                    Khối dựng dùng chung: Entity<TKey>, ValueObject, IHasCreationTime, ISoftDelete, UserFriendlyException
 Website.Domain/                  Tầng Miền
-  {Module}/Entities/             Catalog, Carts, Orders, Users — entity + quy tắc nghiệp vụ (tồn kho theo biến thể, máy trạng thái đơn)
+  {Module}/Entities/             Catalog, Carts, Orders, Inventory, Users — entity + quy tắc nghiệp vụ (tồn kho theo biến thể, máy trạng thái đơn)
   {Module}/Enums/                Enum nghiệp vụ của module, mỗi enum một file (VD Orders/Enums/OrderStatus.cs)
   Interfaces/Repositories/       IRepository<TEntity, TKey>, IUnitOfWork
 Website.Application/             Tầng Ứng dụng: Application Service + DTO cho từng use case, DataSeeder
@@ -35,7 +35,8 @@ Phụ thuộc: `Api → Application → Domain → SharedKernel`, `Api → Infra
 - **Giao dịch**: mỗi use case ghi CSDL bằng một lần `SaveChanges` → tạo đơn + trừ kho + xóa giỏ cùng thành công hoặc cùng hoàn tác.
 - **Chống bán vượt tồn kho**: cột `RowVersion` (khóa lạc quan) trên `ProductVariants`; giao dịch đến sau nhận 409.
 - **Xóa mềm** (`IsDeleted` + query filter toàn cục) cho danh mục, nguyên liệu, sản phẩm, biến thể, người dùng.
-- **Lịch sử đơn bất biến**: `OrderItems` lưu tên sản phẩm, tên biến thể và đơn giá tại thời điểm mua.
+- **Lịch sử đơn bất biến**: `OrderItems` lưu tên sản phẩm, tên biến thể, đơn giá và giá vốn tại thời điểm mua.
+- **Nhập kho & giá vốn** (chỉ Quản trị viên): `StockReceipt` cộng tồn kho và cập nhật `ProductVariant.AverageCost` theo bình quân gia quyền di động; lợi nhuận = doanh thu − giá vốn lưu trên từng dòng đơn. Chỉ phiếu mới nhất của biến thể được sửa/xóa, kéo theo tính lại giá vốn các đơn sau phiếu.
 - **Định dạng API tương thích ABP**: route `/api/services/app/{Service}/{Action}`, response `{ result, success, error, unauthorizedRequest, __abp }`, phân trang `skipCount / maxResultCount`; bảng người dùng `AbpUsers / AbpRoles / AbpUserRoles` như thiết kế CSDL.
 
 ## Chạy dự án

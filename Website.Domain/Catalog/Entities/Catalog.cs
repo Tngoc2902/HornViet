@@ -160,6 +160,46 @@ public class ProductVariant : Entity<int>, ISoftDelete
             throw new UserFriendlyException("Tồn kho không được âm.");
         StockQuantity = quantity;
     }
+
+    /// <summary>
+    /// Giá vốn bình quân hiện tại của một sản phẩm (bình quân di động, VND). null = chưa có phiếu nhập kho nào.
+    /// Chỉ phiếu nhập làm đổi giá trị này; bán hàng, hủy đơn hay kiểm kê (SetStock) xuất / nhập theo đúng giá bình quân hiện tại.
+    /// </summary>
+    public decimal? AverageCost { get; private set; }
+
+    /// <summary>Giá bình quân sau khi nhập thêm: (tồn × giá cũ + nhập × giá nhập) / (tồn + nhập).</summary>
+    /// <remarks>Chưa có tồn hoặc chưa có giá vốn (hàng tồn từ trước khi có chức năng nhập kho) → lấy luôn giá nhập.</remarks>
+    public static decimal MovingAverage(int stockBefore, decimal? averageBefore, int quantityIn, decimal unitCostIn)
+    {
+        if (stockBefore <= 0 || averageBefore is null)
+            return unitCostIn;
+        return Math.Round((stockBefore * averageBefore.Value + quantityIn * unitCostIn) / (stockBefore + quantityIn), 4);
+    }
+
+    /// <summary>Nhập kho: cộng tồn và tính lại giá vốn bình quân.</summary>
+    public void ReceiveStock(int quantity, decimal unitCost)
+    {
+        if (quantity <= 0)
+            throw new UserFriendlyException("Số lượng nhập phải lớn hơn 0.");
+        if (unitCost < 0)
+            throw new UserFriendlyException("Giá nhập không được âm.");
+        AverageCost = MovingAverage(StockQuantity, AverageCost, quantity, unitCost);
+        StockQuantity += quantity;
+    }
+
+    /// <summary>
+    /// Sửa (newQuantity &gt; 0) hoặc hủy (newQuantity = 0) phiếu nhập MỚI NHẤT của biến thể. Sau phiếu đó giá bình quân
+    /// không đổi (chỉ phiếu nhập mới làm đổi), nên giá đúng được tính lại chính xác từ tồn kho và giá vốn trước khi nhập.
+    /// </summary>
+    public void ReplaceLatestReceipt(int stockBefore, decimal? averageBefore, int oldQuantity, int newQuantity, decimal newUnitCost)
+    {
+        var stockAfter = StockQuantity + (newQuantity - oldQuantity);
+        if (stockAfter < 0)
+            throw new UserFriendlyException(
+                $"Không thể giảm số lượng phiếu nhập: hàng đã bán, biến thể \"{DisplayName}\" chỉ còn {StockQuantity} sản phẩm.");
+        StockQuantity = stockAfter;
+        AverageCost = newQuantity == 0 ? averageBefore : MovingAverage(stockBefore, averageBefore, newQuantity, newUnitCost);
+    }
 }
 
 public class ProductImage : Entity<int>

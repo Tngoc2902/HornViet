@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Website.Domain.Carts.Entities;
 using Website.Domain.Catalog.Entities;
 using Website.Domain.Interfaces.Repositories;
+using Website.Domain.Inventory.Entities;
 using Website.Domain.Orders.Entities;
 using Website.Domain.SharedKernel;
 using Website.Domain.Users.Entities;
@@ -28,6 +29,7 @@ public class WebsiteDbContext : DbContext, IUnitOfWork
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<UserAddress> UserAddresses => Set<UserAddress>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<StockReceipt> StockReceipts => Set<StockReceipt>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -74,6 +76,8 @@ public class WebsiteDbContext : DbContext, IUnitOfWork
             e.Property(x => x.Size).HasMaxLength(100);
             e.Property(x => x.Style).HasMaxLength(100);
             e.Property(x => x.RowVersion).IsRowVersion();
+            // Giá vốn bình quân giữ 4 chữ số thập phân để phép chia bình quân không làm lệch tổng giá vốn.
+            e.Property(x => x.AverageCost).HasPrecision(18, 4);
             e.Ignore(x => x.DisplayName);
         });
 
@@ -116,6 +120,7 @@ public class WebsiteDbContext : DbContext, IUnitOfWork
         {
             e.ToTable("OrderItems");
             e.Property(x => x.UnitPrice).HasPrecision(18, 2);
+            e.Property(x => x.UnitCost).HasPrecision(18, 4);
             e.Property(x => x.ProductName).HasMaxLength(255).IsRequired();
             e.Property(x => x.VariantName).HasMaxLength(255).IsRequired();
             e.HasOne<ProductVariant>().WithMany().HasForeignKey(x => x.ProductVariantId).OnDelete(DeleteBehavior.Restrict);
@@ -161,6 +166,19 @@ public class WebsiteDbContext : DbContext, IUnitOfWork
             e.Property(x => x.ReceiverName).HasMaxLength(255).IsRequired();
             e.Property(x => x.PhoneNumber).HasMaxLength(20).IsUnicode(false).IsRequired();
             e.Property(x => x.Address).HasMaxLength(500).IsRequired();
+        });
+
+        // Phiếu nhập kho (chỉ Quản trị viên). Restrict: không xóa được biến thể / người dùng còn phiếu nhập tham chiếu.
+        b.Entity<StockReceipt>(e =>
+        {
+            e.ToTable("StockReceipts");
+            e.Property(x => x.UnitCost).HasPrecision(18, 2);
+            e.Property(x => x.AverageCostBefore).HasPrecision(18, 4);
+            e.Property(x => x.Note).HasMaxLength(500);
+            e.HasOne(x => x.ProductVariant).WithMany().HasForeignKey(x => x.ProductVariantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.CreatorUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.ProductVariantId, x.Id });
+            e.HasIndex(x => x.CreationTime);
         });
 
         // UC Quên mật khẩu: chỉ lưu SHA-256 của mã (hex 64 ký tự). Mã thuộc về tài khoản nên xóa dây chuyền theo User.

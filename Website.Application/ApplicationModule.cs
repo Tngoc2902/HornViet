@@ -1,6 +1,7 @@
 using Website.Application.Accounts;
 using Website.Application.Carts;
 using Website.Application.Catalog;
+using Website.Application.Inventory;
 using Website.Application.Orders;
 using Website.Application.Profiles;
 using Website.Application.Statistics;
@@ -55,6 +56,8 @@ public static class ApplicationModule
         services.AddScoped<IUserAppService, UserAppService>();
         // Thống kê: báo cáo doanh thu, sản phẩm bán chạy, số liệu tổng quan (dashboard).
         services.AddScoped<IStatisticAppService, StatisticAppService>();
+        // Nhập kho & giá vốn (chỉ Quản trị viên) — để tính lợi nhuận.
+        services.AddScoped<IStockReceiptAppService, StockReceiptAppService>();
         // DataSeeder đăng ký trực tiếp theo lớp (không qua interface) vì chỉ Program.cs dùng nó lúc khởi động
         // để tạo dữ liệu ban đầu.
         services.AddScoped<DataSeeder>();

@@ -5,7 +5,7 @@ Ba script tạo lại toàn bộ database trên SQL Server 2019 trở lên, khô
 | File | Nội dung |
 |---|---|
 | `01_create_database.sql` | Tạo database `HonSungVietDb`, collation `Latin1_General_100_CI_AI` |
-| `02_schema.sql` | 14 bảng (kể cả `PasswordResetTokens` cho Quên mật khẩu) + khóa, chỉ mục (sinh từ EF Core migration, chạy lại an toàn) |
+| `02_schema.sql` | 15 bảng (kể cả `PasswordResetTokens` cho Quên mật khẩu, `StockReceipts` cho nhập kho) + khóa, chỉ mục (sinh từ EF Core migration, chạy lại an toàn) |
 | `03_seed.sql` | Vai trò, tài khoản demo, 6 danh mục, 2 nguyên liệu, 7 sản phẩm, 12 biến thể (bỏ qua nếu đã có dữ liệu) |
 
 ## Cách 1 — SQL Server Management Studio
@@ -43,6 +43,7 @@ sqlcmd -S localhost -E -C -b -I -f 65001 -d HonSungVietDb -i 03_seed.sql
 - **Collation `Latin1_General_100_CI_AI`**: không phân biệt hoa thường và dấu, kể cả ư/ơ/đ, nên tìm "luoc sung" ra "Lược sừng", "do trang tri" ra "Đồ trang trí". `Vietnamese_CI_AI` không làm được điều này vì coi ư, ơ, đ là chữ cái riêng.
 - **Bảng người dùng** giữ tên `AbpUsers`, `AbpRoles`, `AbpUserRoles` theo thiết kế CSDL mục 3.6.
 - **`ProductVariants.RowVersion`** (rowversion): khóa lạc quan, chống bán vượt tồn kho khi nhiều khách đặt cùng lúc.
+- **Giá vốn**: `ProductVariants.AverageCost` (giá vốn bình quân, decimal(18,4)), `OrderItems.UnitCost` (giá vốn lúc bán), `StockReceipts` (phiếu nhập; `StockBefore` / `AverageCostBefore` lưu trạng thái trước phiếu để sửa/hủy phiếu mới nhất). Cả hai cột giá vốn `NULL` với dữ liệu có từ trước chức năng nhập kho.
 - **Xóa mềm** (`IsDeleted`) cho danh mục, nguyên liệu, sản phẩm, biến thể, người dùng; các chỉ mục duy nhất (tên, email) chỉ áp dụng cho bản ghi chưa xóa.
 
 Khi đổi model, sinh lại `02_schema.sql`:
