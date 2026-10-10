@@ -53,6 +53,7 @@ public class HornVietDbContext : DbContext, IUnitOfWork
             e.ToTable("Materials");
             e.Property(x => x.Name).HasMaxLength(255).IsRequired();
             e.Property(x => x.Origin).HasMaxLength(255);
+            e.Property(x => x.Image).HasMaxLength(500);
             e.HasIndex(x => x.Name).IsUnique().HasFilter("[IsDeleted] = 0");
         });
 

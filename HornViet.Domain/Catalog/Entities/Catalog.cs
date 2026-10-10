@@ -37,6 +37,11 @@ public class Material : Entity<int>, IHasCreationTime, ISoftDelete
     public string? Origin { get; set; }
     /// <summary>Mô tả thêm về nguyên liệu, không bắt buộc.</summary>
     public string? Description { get; set; }
+    /// <summary>
+    /// Đường dẫn ảnh minh họa nguyên liệu (/uploads/...), không bắt buộc — hiển thị ở trang chủ ("Dòng hàng nổi bật")
+    /// và trang Nguồn gốc của cửa hàng; để trống thì cửa hàng dùng ảnh sản phẩm làm từ nguyên liệu đó.
+    /// </summary>
+    public string? Image { get; set; }
     /// <summary>Thời điểm tạo, do DbContext tự gán.</summary>
     public DateTime CreationTime { get; set; }
     /// <summary>Cờ xóa mềm.</summary>
