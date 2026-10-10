@@ -22,7 +22,7 @@ Ngoài phạm vi (hệ thống **chưa** có): cổng thanh toán trực tuyến
 
 ## 2. Vai trò & quyền
 
-Phân quyền ở `Website.Api/Controllers/Shopping/OrderController.cs` (chính sách `Management` = vai trò `Admin` hoặc `Staff`, khai báo trong `Website.Api/Authorization/Authentication.cs`). Chi tiết vai trò: [02-phan-quyen-nguoi-dung.md](02-phan-quyen-nguoi-dung.md).
+Phân quyền ở `HornViet.Api/Controllers/Shopping/OrderController.cs` (chính sách `Management` = vai trò `Admin` hoặc `Staff`, khai báo trong `HornViet.Api/Authorization/Authentication.cs`). Chi tiết vai trò: [02-phan-quyen-nguoi-dung.md](02-phan-quyen-nguoi-dung.md).
 
 | Thao tác | Khách hàng | Nhân viên | Quản trị viên |
 |---|---|---|---|
@@ -40,7 +40,7 @@ Phân quyền ở `Website.Api/Controllers/Shopping/OrderController.cs` (chính 
 
 | Khái niệm | Mô tả | Code |
 |---|---|---|
-| Đơn hàng (`Order`) | Aggregate root, giữ thông tin giao hàng, phương thức thanh toán, tổng tiền và máy trạng thái. Các thuộc tính có `private set` — chỉ đổi qua constructor, `AddItem`, `ChangeStatus`. | `Website.Domain/Orders/Entities/Order.cs` |
+| Đơn hàng (`Order`) | Aggregate root, giữ thông tin giao hàng, phương thức thanh toán, tổng tiền và máy trạng thái. Các thuộc tính có `private set` — chỉ đổi qua constructor, `AddItem`, `ChangeStatus`. | `HornViet.Domain/Orders/Entities/Order.cs` |
 | Dòng đơn (`OrderItem`) | **Ảnh chụp** tại thời điểm mua: `ProductName`, `VariantName`, `UnitPrice` (giá bán), `UnitCost` (giá vốn). Sửa/ẩn/xóa sản phẩm sau này không làm đổi đơn cũ. | `Order.cs` |
 | Tổng tiền | `TotalAmount = Σ (UnitPrice × Quantity)`, tính lại mỗi lần `AddItem`. Không có phí vận chuyển hay giảm giá. | `Order.AddItem` |
 | Giá vốn lúc bán (`UnitCost`) | Chụp từ `ProductVariant.AverageCost` khi đặt. `null` nếu biến thể chưa có phiếu nhập kho (hoặc đơn tạo trước khi có chức năng nhập kho). Dùng để tính lợi nhuận. | `OrderAppService.CreateAsync` |
@@ -64,7 +64,7 @@ Nhãn dùng chung ở `PAYMENT_LABEL` (`lib/hsv/format.ts` của cả hai fronte
 | O3 | Đơn giá lấy từ `Product.Price` **tại thời điểm đặt**; giá vốn từ `ProductVariant.AverageCost`. | `CreateAsync` → `order.AddItem(...)` |
 | O4 | Với mỗi dòng: trừ kho (`ProductVariant.DecreaseStock`), thêm dòng đơn, xóa dòng giỏ. | `CreateAsync` |
 | O5 | Tạo đơn + trừ kho + xóa giỏ nằm trong **một lần `SaveChangesAsync`** (một giao dịch): hoặc tất cả thành công, hoặc không có gì được ghi. | `CreateAsync`, `IUnitOfWork` |
-| O6 | **Chống bán vượt tồn** khi hai khách mua cùng lúc: `ProductVariants.RowVersion` là khóa lạc quan. Giao dịch đến sau phát hiện tồn kho đã bị đổi → `DbUpdateConcurrencyException` → HTTP **409**. | `ProductVariant.RowVersion`, `WebsiteDbContext` (`IsRowVersion()`), `ResponseHandling.cs` |
+| O6 | **Chống bán vượt tồn** khi hai khách mua cùng lúc: `ProductVariants.RowVersion` là khóa lạc quan. Giao dịch đến sau phát hiện tồn kho đã bị đổi → `DbUpdateConcurrencyException` → HTTP **409**. | `ProductVariant.RowVersion`, `HornVietDbContext` (`IsRowVersion()`), `ResponseHandling.cs` |
 | O7 | Thông tin giao hàng bắt buộc: tên người nhận (≤ 255), số điện thoại khớp `^(0\|\+84)(3\|5\|7\|8\|9)\d{8}$` (`AppConsts.PhoneRegex`), địa chỉ (≤ 500). Ghi chú tùy chọn (≤ 500). Các chuỗi được `Trim()` trước khi lưu. | `CreateOrderInput`, `CreateAsync` |
 | O8 | Đơn mới luôn ở trạng thái `Pending` (Chờ xử lý). | constructor `Order` |
 
@@ -124,7 +124,7 @@ Lọc ngày: `fromDate` lấy từ 00:00 của ngày đó, `toDate` lấy **hế
 
 ### 3.6 Liên hệ với doanh thu
 
-Doanh thu và lợi nhuận **chỉ tính đơn `Completed`**, lọc theo `CreationTime` (ngày đặt) của đơn — xem `CompletedOrders` trong `Website.Application/Statistics/StatisticAppService.cs`. Lợi nhuận = Σ `(UnitPrice − UnitCost) × Quantity` trên các dòng có `UnitCost`. Đơn Chờ xử lý / Đang giao / Đã hủy không được cộng. Chi tiết: [08-thong-ke-bao-cao.md](08-thong-ke-bao-cao.md).
+Doanh thu và lợi nhuận **chỉ tính đơn `Completed`**, lọc theo `CreationTime` (ngày đặt) của đơn — xem `CompletedOrders` trong `HornViet.Application/Statistics/StatisticAppService.cs`. Lợi nhuận = Σ `(UnitPrice − UnitCost) × Quantity` trên các dòng có `UnitCost`. Đơn Chờ xử lý / Đang giao / Đã hủy không được cộng. Chi tiết: [08-thong-ke-bao-cao.md](08-thong-ke-bao-cao.md).
 
 ## 4. Flow logic
 
@@ -177,7 +177,7 @@ sequenceDiagram
 | 4 | Lấy các dòng giỏ của người dùng (kèm biến thể, sản phẩm), sắp theo `Id`. | `OrderAppService.CreateAsync` |
 | 5 | Gom lỗi tồn kho (O2) → `UserFriendlyException(message, details)`. | `CreateAsync` |
 | 6 | Tạo `Order`, với mỗi dòng: `DecreaseStock`, `AddItem` (chụp tên, biến thể, giá, giá vốn), xóa dòng giỏ. | `CreateAsync`, `ProductVariant.DecreaseStock`, `Order.AddItem` |
-| 7 | `SaveChangesAsync` một lần (O5). `WebsiteDbContext` tự gán `CreationTime`. Xung đột `RowVersion` → 409 (O6). | `Website.Infrastructure/Persistence/WebsiteDbContext.cs` |
+| 7 | `SaveChangesAsync` một lần (O5). `HornVietDbContext` tự gán `CreationTime`. Xung đột `RowVersion` → 409 (O6). | `HornViet.Infrastructure/Persistence/HornVietDbContext.cs` |
 | 8 | Thành công: frontend gọi `clearLocal()` rồi chuyển `/order-success/{id}`. Lỗi: hiện `fullMessage` (thông báo + chi tiết); nếu có lỗi theo trường thì chuyển sang chế độ nhập tay và tô đỏ trường; nếu 400/409 thì tải lại giỏ để thấy tồn kho mới nhất. | `cart/page.tsx` → `submit` |
 
 ### 4.2 Hủy đơn của khách (`Order/Cancel`)
@@ -311,7 +311,7 @@ Trường chính:
 
 ## 7. Dữ liệu
 
-Cấu hình trong `Website.Infrastructure/Persistence/WebsiteDbContext.cs`. Tổng quan CSDL: [10-co-so-du-lieu.md](10-co-so-du-lieu.md).
+Cấu hình trong `HornViet.Infrastructure/Persistence/HornVietDbContext.cs`. Tổng quan CSDL: [10-co-so-du-lieu.md](10-co-so-du-lieu.md).
 
 **Bảng `Orders`**
 
@@ -364,21 +364,21 @@ Bảng bị thay đổi khi đặt/hủy: `ProductVariants.StockQuantity` (trừ
 
 ## 9. Mã nguồn liên quan
 
-**Backend (`Website.Api`)**
+**Backend (`HornViet.Api`)**
 
 | File | Vai trò |
 |---|---|
-| `Website.Domain/Orders/Entities/Order.cs` | `Order`, `OrderItem`, `FormatCode`, `AddItem`, `ChangeStatus` |
-| `Website.Domain/Orders/Enums/OrderStatus.cs` | Enum trạng thái |
-| `Website.Domain/Orders/Enums/PaymentMethod.cs` | Enum phương thức thanh toán |
-| `Website.Domain/Catalog/Entities/Catalog.cs` | `ProductVariant.DecreaseStock`, `IncreaseStock`, `RowVersion`, `AverageCost` |
-| `Website.Application/Orders/OrderAppService.cs` | DTO và toàn bộ nghiệp vụ đơn hàng: `CreateAsync`, `GetMyOrdersAsync`, `GetAsync`, `CancelAsync`, `GetAllAsync`, `UpdateStatusAsync`, `RestockAsync`, `TryParseOrderCode` |
-| `Website.Api/Controllers/Shopping/OrderController.cs` | 6 endpoint, phân quyền |
-| `Website.Api/Middlewares/ResponseHandling.cs` | Ánh xạ lỗi → 400/404/409 |
-| `Website.Infrastructure/Persistence/WebsiteDbContext.cs` | Cấu hình `Orders`, `OrderItems`, `RowVersion` |
-| `Website.Domain/AppConsts.cs` | `PhoneRegex` |
-| `Website.Application/Statistics/StatisticAppService.cs` | `pendingOrderCount`, doanh thu chỉ tính đơn Hoàn thành |
-| `tests/Website.Domain.UnitTests/Orders/OrderTests.cs` | Kiểm thử máy trạng thái, tổng tiền, `FormatCode` |
+| `HornViet.Domain/Orders/Entities/Order.cs` | `Order`, `OrderItem`, `FormatCode`, `AddItem`, `ChangeStatus` |
+| `HornViet.Domain/Orders/Enums/OrderStatus.cs` | Enum trạng thái |
+| `HornViet.Domain/Orders/Enums/PaymentMethod.cs` | Enum phương thức thanh toán |
+| `HornViet.Domain/Catalog/Entities/Catalog.cs` | `ProductVariant.DecreaseStock`, `IncreaseStock`, `RowVersion`, `AverageCost` |
+| `HornViet.Application/Orders/OrderAppService.cs` | DTO và toàn bộ nghiệp vụ đơn hàng: `CreateAsync`, `GetMyOrdersAsync`, `GetAsync`, `CancelAsync`, `GetAllAsync`, `UpdateStatusAsync`, `RestockAsync`, `TryParseOrderCode` |
+| `HornViet.Api/Controllers/Shopping/OrderController.cs` | 6 endpoint, phân quyền |
+| `HornViet.Api/Middlewares/ResponseHandling.cs` | Ánh xạ lỗi → 400/404/409 |
+| `HornViet.Infrastructure/Persistence/HornVietDbContext.cs` | Cấu hình `Orders`, `OrderItems`, `RowVersion` |
+| `HornViet.Domain/AppConsts.cs` | `PhoneRegex` |
+| `HornViet.Application/Statistics/StatisticAppService.cs` | `pendingOrderCount`, doanh thu chỉ tính đơn Hoàn thành |
+| `tests/HornViet.Domain.UnitTests/Orders/OrderTests.cs` | Kiểm thử máy trạng thái, tổng tiền, `FormatCode` |
 
 **Frontend cửa hàng (`HornViet_customer`)**
 

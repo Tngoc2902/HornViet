@@ -2,8 +2,8 @@
 // nền tảng mà tầng Domain tham chiếu tới, gồm lớp cơ sở Entity, ValueObject, các interface đánh dấu
 // (IHasCreationTime, ISoftDelete) và các lớp lỗi nghiệp vụ. Dự án này không phụ thuộc vào EF Core hay ASP.NET,
 // nhờ vậy tầng Domain giữ được sự "thuần" nghiệp vụ, dễ kiểm thử đơn vị.
-// Namespace đặt là Website.Domain.SharedKernel để các lớp Domain dùng như một phần tự nhiên của Domain.
-namespace Website.Domain.SharedKernel;
+// Namespace đặt là HornViet.Domain.SharedKernel để các lớp Domain dùng như một phần tự nhiên của Domain.
+namespace HornViet.Domain.SharedKernel;
 
 // Entity (Thực thể) trong DDD: đối tượng được nhận diện bằng định danh (Id) chứ không phải bằng giá trị
 // các thuộc tính. VD: hai sản phẩm trùng tên, trùng giá vẫn là hai sản phẩm khác nhau vì Id khác nhau.
@@ -24,7 +24,7 @@ public abstract class Entity<TKey>
 }
 
 // interface: "hợp đồng" chỉ khai báo thành viên mà lớp phải có, không chứa cài đặt.
-// Đây là interface đánh dấu (marker): lớp nào cài đặt nó thì WebsiteDbContext.ApplyAuditConcepts (tầng
+// Đây là interface đánh dấu (marker): lớp nào cài đặt nó thì HornVietDbContext.ApplyAuditConcepts (tầng
 // Infrastructure) tự gán CreationTime = DateTime.Now khi bản ghi được thêm mới và CreationTime chưa có giá trị.
 // Nhờ vậy nghiệp vụ không phải tự nhớ gán thời điểm tạo — dùng để sắp xếp, lọc đơn theo ngày, thống kê.
 /// <summary>Thời điểm tạo được DbContext gán tự động khi thêm mới.</summary>
@@ -38,7 +38,7 @@ public interface IHasCreationTime
 // Lý do: đơn hàng cũ, giỏ hàng... vẫn tham chiếu khóa ngoại tới sản phẩm/biến thể/người dùng; xóa cứng sẽ làm
 // mất lịch sử hoặc vi phạm ràng buộc khóa ngoại. Áp dụng cho UC Quản lý sản phẩm và biến thể (Bảng 3.10 –
 // xóa mềm) và UC Quản lý người dùng (Bảng 3.13).
-// Cơ chế (ở tầng Infrastructure): WebsiteDbContext đăng ký bộ lọc toàn cục x => !x.IsDeleted cho mọi lớp cài
+// Cơ chế (ở tầng Infrastructure): HornVietDbContext đăng ký bộ lọc toàn cục x => !x.IsDeleted cho mọi lớp cài
 // interface này, và đổi trạng thái Deleted thành Modified + IsDeleted = true khi SaveChanges.
 /// <summary>Thực thể xóa mềm: lệnh xóa được DbContext đổi thành IsDeleted = true và bị lọc khỏi mọi truy vấn.</summary>
 public interface ISoftDelete

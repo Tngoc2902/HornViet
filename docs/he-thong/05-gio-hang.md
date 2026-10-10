@@ -35,8 +35,8 @@ Không có API nào cho phép xem/sửa giỏ của người khác: mọi thao t
 
 | Khái niệm | Mô tả | Code |
 |---|---|---|
-| Giỏ (`Cart`) | Mỗi người dùng **đúng một** giỏ (chỉ mục duy nhất trên `Carts.UserId`). Giỏ chỉ được tạo (INSERT) khi thêm sản phẩm lần đầu; trước đó API trả về giỏ rỗng chưa lưu (`Id = 0`). | `Website.Domain/Carts/Entities/Cart.cs`, `CartAppService.LoadCartAsync` |
-| Dòng giỏ (`CartItem`) | Một biến thể + số lượng. Không lưu giá. | `Website.Domain/Carts/Entities/Cart.cs` |
+| Giỏ (`Cart`) | Mỗi người dùng **đúng một** giỏ (chỉ mục duy nhất trên `Carts.UserId`). Giỏ chỉ được tạo (INSERT) khi thêm sản phẩm lần đầu; trước đó API trả về giỏ rỗng chưa lưu (`Id = 0`). | `HornViet.Domain/Carts/Entities/Cart.cs`, `CartAppService.LoadCartAsync` |
+| Dòng giỏ (`CartItem`) | Một biến thể + số lượng. Không lưu giá. | `HornViet.Domain/Carts/Entities/Cart.cs` |
 | Đơn vị đặt mua | **Biến thể** (`ProductVariant`: kích thước / kiểu dáng), không phải sản phẩm. Hai biến thể của cùng sản phẩm là hai dòng khác nhau. | |
 
 ### 3.2 Quy tắc
@@ -112,9 +112,9 @@ sequenceDiagram
 | 1 | Trang chi tiết tính số còn có thể thêm: `avail = tồn kho − số lượng biến thể này đã có trong giỏ`. Nếu `avail = 0` nút đổi thành "Đã đạt tối đa tồn kho" và bị khóa; hết hàng thì nút "Hết hàng". | `HornViet_customer/app/(store)/products/[id]/page.tsx` |
 | 2 | Chưa đăng nhập → thông báo và chuyển `/login?returnUrl=/products/{id}`. | cùng file, `onAdd` |
 | 3 | Gọi `add()` của `CartContext` → `cartApi.addItem` → `POST /api/services/app/Cart/AddItem`. | `HornViet_customer/contexts/cart-context.tsx`, `HornViet_customer/lib/api/services.ts` |
-| 4 | Server nạp biến thể kèm sản phẩm; kiểm tra tồn tại và `IsActive`. | `Website.Application/Carts/CartAppService.cs` → `AddItemAsync` |
+| 4 | Server nạp biến thể kèm sản phẩm; kiểm tra tồn tại và `IsActive`. | `HornViet.Application/Carts/CartAppService.cs` → `AddItemAsync` |
 | 5 | Nạp giỏ của người dùng (kèm dòng → biến thể → sản phẩm); chưa có thì tạo mới. | `CartAppService.LoadCartAsync` |
-| 6 | `AddOrIncrease`: cộng dồn nếu đã có dòng cùng biến thể (R1), kiểm tra tồn kho trên **tổng mới** (R3). | `Website.Domain/Carts/Entities/Cart.cs` |
+| 6 | `AddOrIncrease`: cộng dồn nếu đã có dòng cùng biến thể (R1), kiểm tra tồn kho trên **tổng mới** (R3). | `HornViet.Domain/Carts/Entities/Cart.cs` |
 | 7 | Lưu và trả về `CartDto`. Frontend thay state → số trên header đổi ngay. Lỗi thì hiện thông báo và tải lại sản phẩm (tồn kho có thể vừa đổi). | `CartAppService.ToDto`, `products/[id]/page.tsx` |
 
 ### 4.2 Cập nhật số lượng và xóa dòng
@@ -225,7 +225,7 @@ Tất cả yêu cầu header `Authorization: Bearer <token>` và đều trả v�
 
 ## 7. Dữ liệu
 
-Cấu hình bảng trong `Website.Infrastructure/Persistence/WebsiteDbContext.cs`. Tổng quan CSDL: [10-co-so-du-lieu.md](10-co-so-du-lieu.md).
+Cấu hình bảng trong `HornViet.Infrastructure/Persistence/HornVietDbContext.cs`. Tổng quan CSDL: [10-co-so-du-lieu.md](10-co-so-du-lieu.md).
 
 **Bảng `Carts`**
 
@@ -249,7 +249,7 @@ Bảng liên quan (chỉ đọc khi xử lý giỏ): `ProductVariants` (`StockQu
 
 ## 8. Lỗi thường gặp & cách xử lý
 
-Định dạng lỗi chung (`error.message`, `error.details`) và cách ánh xạ mã HTTP nằm ở `Website.Api/Middlewares/ResponseHandling.cs` (`BusinessErrors.TryMap`).
+Định dạng lỗi chung (`error.message`, `error.details`) và cách ánh xạ mã HTTP nằm ở `HornViet.Api/Middlewares/ResponseHandling.cs` (`BusinessErrors.TryMap`).
 
 | Thông báo (từ code) | HTTP | Khi nào | Cách xử lý |
 |---|---|---|---|
@@ -267,18 +267,18 @@ Bảng liên quan (chỉ đọc khi xử lý giỏ): `ProductVariants` (`StockQu
 
 ## 9. Mã nguồn liên quan
 
-**Backend (`Website.Api`)**
+**Backend (`HornViet.Api`)**
 
 | File | Vai trò |
 |---|---|
-| `Website.Domain/Carts/Entities/Cart.cs` | Thực thể `Cart`, `CartItem`; `AddOrIncrease`, `EnsureInStock` |
-| `Website.Domain/Catalog/Entities/Catalog.cs` | `Product.Price`, `Product.IsActive`, `ProductVariant.StockQuantity`, `DisplayName` |
-| `Website.Application/Carts/CartAppService.cs` | DTO, `GetMyCartAsync`, `AddItemAsync`, `UpdateItemAsync`, `DeleteItemAsync`, `ToDto` |
-| `Website.Api/Controllers/Shopping/CartController.cs` | 4 endpoint, `[Authorize]` |
-| `Website.Application/Catalog/ProductAppService.cs` | Xóa dòng giỏ khi xóa sản phẩm / gỡ biến thể |
-| `Website.Infrastructure/Persistence/WebsiteDbContext.cs` | Cấu hình bảng `Carts`, `CartItems`, bộ lọc xóa mềm |
-| `Website.Api/Middlewares/ResponseHandling.cs` | Ánh xạ lỗi → 400/404/409 |
-| `tests/Website.Domain.UnitTests/Carts/CartTests.cs` | Kiểm thử gộp dòng, vượt tồn, hết hàng, số lượng ≤ 0 |
+| `HornViet.Domain/Carts/Entities/Cart.cs` | Thực thể `Cart`, `CartItem`; `AddOrIncrease`, `EnsureInStock` |
+| `HornViet.Domain/Catalog/Entities/Catalog.cs` | `Product.Price`, `Product.IsActive`, `ProductVariant.StockQuantity`, `DisplayName` |
+| `HornViet.Application/Carts/CartAppService.cs` | DTO, `GetMyCartAsync`, `AddItemAsync`, `UpdateItemAsync`, `DeleteItemAsync`, `ToDto` |
+| `HornViet.Api/Controllers/Shopping/CartController.cs` | 4 endpoint, `[Authorize]` |
+| `HornViet.Application/Catalog/ProductAppService.cs` | Xóa dòng giỏ khi xóa sản phẩm / gỡ biến thể |
+| `HornViet.Infrastructure/Persistence/HornVietDbContext.cs` | Cấu hình bảng `Carts`, `CartItems`, bộ lọc xóa mềm |
+| `HornViet.Api/Middlewares/ResponseHandling.cs` | Ánh xạ lỗi → 400/404/409 |
+| `tests/HornViet.Domain.UnitTests/Carts/CartTests.cs` | Kiểm thử gộp dòng, vượt tồn, hết hàng, số lượng ≤ 0 |
 
 **Frontend cửa hàng (`HornViet_customer`)**
 

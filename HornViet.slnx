@@ -1,0 +1,10 @@
+<Solution>
+  <Project Path="SharedKernel/SharedKernel.csproj" />
+  <Project Path="HornViet.Domain/HornViet.Domain.csproj" />
+  <Project Path="HornViet.Application/HornViet.Application.csproj" />
+  <Project Path="HornViet.Infrastructure/HornViet.Infrastructure.csproj" />
+  <Project Path="HornViet.Api/HornViet.Api.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="tests/HornViet.Domain.UnitTests/HornViet.Domain.UnitTests.csproj" />
+  </Folder>
+</Solution>

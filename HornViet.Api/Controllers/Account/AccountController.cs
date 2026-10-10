@@ -1,0 +1,23 @@
+using HornViet.Application.Accounts;
+using Microsoft.AspNetCore.Mvc;
+
+namespace HornViet.Api.Controllers.Account;
+
+/// <summary>UC Đăng ký và UC Quên mật khẩu (công khai, không cần đăng nhập).</summary>
+public class AccountController : HornVietBaseController
+{
+    private readonly IAccountAppService _accountAppService;
+
+    public AccountController(IAccountAppService accountAppService) => _accountAppService = accountAppService;
+
+    [HttpPost]
+    public Task<ActionResult<RegisterOutput>> Register([FromBody] RegisterInput input) => Run(() => _accountAppService.RegisterAsync(input));
+
+    /// <summary>Gửi email chứa link đặt lại mật khẩu. Luôn trả thành công để không lộ email nào đã đăng ký.</summary>
+    [HttpPost]
+    public Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordInput input) => Run(() => _accountAppService.ForgotPasswordAsync(input));
+
+    /// <summary>Đặt mật khẩu mới bằng mã trong link email (dùng một lần, hết hạn sau 30 phút).</summary>
+    [HttpPost]
+    public Task<IActionResult> ResetPassword([FromBody] ResetPasswordInput input) => Run(() => _accountAppService.ResetPasswordAsync(input));
+}

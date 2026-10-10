@@ -1,6 +1,6 @@
 # Giao diện frontend (2 ứng dụng)
 
-Hệ thống Hồn Sừng Việt có hai ứng dụng web Next.js gọi chung một backend `Website.Api`: **trang cửa hàng** cho Khách hàng (`HornViet_customer`, cổng 3000) và **trang quản trị** cho Nhân viên, Quản trị viên (`HornViet_admin`, cổng 3001). Tài liệu này mô tả cấu trúc, sơ đồ màn hình, lớp gọi API, quản lý phiên, các thành phần dùng chung và cách mở rộng hai ứng dụng.
+Hệ thống Hồn Sừng Việt có hai ứng dụng web Next.js gọi chung một backend `HornViet.Api`: **trang cửa hàng** cho Khách hàng (`HornViet_customer`, cổng 3000) và **trang quản trị** cho Nhân viên, Quản trị viên (`HornViet_admin`, cổng 3001). Tài liệu này mô tả cấu trúc, sơ đồ màn hình, lớp gọi API, quản lý phiên, các thành phần dùng chung và cách mở rộng hai ứng dụng.
 
 ---
 
@@ -35,7 +35,7 @@ Toàn bộ cây giao diện được bọc trong `components/ClientOnly.tsx` ở
 
 ### 1.3 Cách chạy
 
-Yêu cầu: backend `Website.Api` đang chạy (dev: `http://localhost:21021` hoặc `https://localhost:44311`) và origin của frontend có trong `App:CorsOrigins` của backend (mặc định `http://localhost:3000,http://localhost:3001`). Xem thêm [Cấu hình và triển khai](11-cau-hinh-trien-khai.md).
+Yêu cầu: backend `HornViet.Api` đang chạy (dev: `http://localhost:21021` hoặc `https://localhost:44311`) và origin của frontend có trong `App:CorsOrigins` của backend (mặc định `http://localhost:3000,http://localhost:3001`). Xem thêm [Cấu hình và triển khai](11-cau-hinh-trien-khai.md).
 
 ```bash
 # Trong thư mục HornViet_customer hoặc HornViet_admin
@@ -250,7 +250,7 @@ sequenceDiagram
     participant H as useApi
     participant S as services.ts
     participant C as http.ts request
-    participant API as Website.Api
+    participant API as HornViet.Api
     participant A as AuthProvider
 
     UI->>H: useApi với fetcher orderApi.getAll(q)
@@ -335,7 +335,7 @@ sequenceDiagram
     participant U as Người dùng
     participant L as Trang đăng nhập quản trị
     participant Auth as AuthProvider
-    participant API as Website.Api
+    participant API as HornViet.Api
     participant P as Layout panel
 
     U->>L: nhập tên đăng nhập và mật khẩu
@@ -561,7 +561,7 @@ Nghiệp vụ thật của giá vốn, lợi nhuận xem [Nhập kho, giá vốn
 
 | Hiện tượng | Nguyên nhân thường gặp | Cách xử lý |
 | --- | --- | --- |
-| Mọi trang báo "Không kết nối được máy chủ.", console trình duyệt có lỗi CORS | Origin của frontend không có trong `App:CorsOrigins` của backend, hoặc ghi lệch (thừa `/` cuối, sai cổng, `127.0.0.1` thay vì `localhost`) | Thêm đúng origin (`http://localhost:3000`, `http://localhost:3001`) vào `App:CorsOrigins` trong `Website.Api/appsettings.json`, chạy lại backend. Xem [Cấu hình, triển khai](11-cau-hinh-trien-khai.md) |
+| Mọi trang báo "Không kết nối được máy chủ.", console trình duyệt có lỗi CORS | Origin của frontend không có trong `App:CorsOrigins` của backend, hoặc ghi lệch (thừa `/` cuối, sai cổng, `127.0.0.1` thay vì `localhost`) | Thêm đúng origin (`http://localhost:3000`, `http://localhost:3001`) vào `App:CorsOrigins` trong `HornViet.Api/appsettings.json`, chạy lại backend. Xem [Cấu hình, triển khai](11-cau-hinh-trien-khai.md) |
 | "Không kết nối được máy chủ." dù không có lỗi CORS | Backend chưa chạy, sai cổng, hoặc dùng `https://localhost:44311` mà trình duyệt chưa tin chứng chỉ dev | Kiểm tra backend; dev nên dùng `http://localhost:21021` |
 | Mọi API báo "Không tìm thấy dữ liệu." (404) | `NEXT_PUBLIC_API_BASE_URL` trống hoặc sai nên request đi vào chính server Next.js | Kiểm tra `.env.local` (tạo từ `.env.example`), sau đó **chạy lại** `npm run dev` |
 | Ảnh sản phẩm chỉ hiện nền gradient | Ảnh lỗi hoặc base URL sai (`assetUrl` ghép với `API_BASE_URL`) | Kiểm tra biến môi trường và file trong thư mục upload của backend |
@@ -588,5 +588,5 @@ Nghiệp vụ thật của giá vốn, lợi nhuận xem [Nhập kho, giá vốn
 | Tiện ích | `lib/hsv/format.ts`, `lib/hsv/validation.ts`, `lib/hsv/tones.ts`, `lib/storage.ts`, `lib/utils.ts` (cả hai repo); `HornViet_admin/lib/hsv/events.ts` |
 | Dữ liệu ảo | `HornViet_admin/lib/hsv/mock-cost.ts` |
 | Context khác | `contexts/catalog-context.tsx` (cả hai repo), `HornViet_customer/contexts/cart-context.tsx` |
-| Cấu hình | `.env.example`, `package.json`, `tailwind.config.ts`, `app/globals.css`, `next.config.mjs` (từng repo); `Website.Api/appsettings.json` (`App:CorsOrigins`) |
+| Cấu hình | `.env.example`, `package.json`, `tailwind.config.ts`, `app/globals.css`, `next.config.mjs` (từng repo); `HornViet.Api/appsettings.json` (`App:CorsOrigins`) |
 | Tài liệu | `HornViet_admin/README.md`, [docs/API.md](../API.md) |

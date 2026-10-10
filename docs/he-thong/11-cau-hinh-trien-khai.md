@@ -6,7 +6,7 @@ Hướng dẫn cấu hình backend (`appsettings`, user-secrets, biến môi tr�
 
 | Thành phần | Nội dung trong tài liệu |
 |---|---|
-| Backend `Website.Api` | Các khóa cấu hình, thứ tự nạp cấu hình, user-secrets, triển khai |
+| Backend `HornViet.Api` | Các khóa cấu hình, thứ tự nạp cấu hình, user-secrets, triển khai |
 | `HornViet_admin`, `HornViet_customer` | Biến `NEXT_PUBLIC_*`, build và chạy production |
 | Hạ tầng | SQL Server, SMTP, HTTPS, CORS, thư mục `wwwroot/uploads` |
 
@@ -23,7 +23,7 @@ Tài liệu dành cho người phát triển / người vận hành. Liên quan 
 
 ### 3.1 Nguồn và thứ tự nạp cấu hình
 
-`WebApplication.CreateBuilder` (`Website.Api/Program.cs`) nạp cấu hình theo thứ tự, nguồn sau ghi đè nguồn trước:
+`WebApplication.CreateBuilder` (`HornViet.Api/Program.cs`) nạp cấu hình theo thứ tự, nguồn sau ghi đè nguồn trước:
 
 ```mermaid
 flowchart LR
@@ -33,16 +33,16 @@ flowchart LR
     D --> E["Tham số dòng lệnh"]
 ```
 
-- Môi trường do `ASPNETCORE_ENVIRONMENT` quyết định; profile `https` trong `Website.Api/Properties/launchSettings.json` đặt `Development`.
+- Môi trường do `ASPNETCORE_ENVIRONMENT` quyết định; profile `https` trong `HornViet.Api/Properties/launchSettings.json` đặt `Development`.
 - Biến môi trường dùng `__` (hai dấu gạch dưới) thay cho `:`, VD `Smtp:Password` → `Smtp__Password`.
-- User-secrets lưu ngoài repo (theo `UserSecretsId` trong `Website.Api/Website.Api.csproj`), dùng cho mật khẩu SMTP ở máy dev.
+- User-secrets lưu ngoài repo (theo `UserSecretsId` trong `HornViet.Api/HornViet.Api.csproj`), dùng cho mật khẩu SMTP ở máy dev.
 
 ### 3.2 Bảng khóa cấu hình
 
 | Khóa | Mặc định (`appsettings.json`) | Development (`appsettings.Development.json`) | Ý nghĩa | Đọc ở |
 |---|---|---|---|---|
-| `ConnectionStrings:Default` | `Server=localhost; Database=HonSungVietDb; Trusted_Connection=True; TrustServerCertificate=True;` | Như mặc định | Chuỗi kết nối SQL Server. Thiếu → không khởi động ("Thiếu ConnectionStrings:Default.") | `Website.Infrastructure/DependencyInjectionRegister.cs` |
-| `Jwt:Issuer`, `Jwt:Audience` | `HonSungViet` | — | Kiểm tra khi xác thực token | `Website.Api/Authorization/Authentication.cs` |
+| `ConnectionStrings:Default` | `Server=localhost; Database=HonSungVietDb; Trusted_Connection=True; TrustServerCertificate=True;` | Như mặc định | Chuỗi kết nối SQL Server. Thiếu → không khởi động ("Thiếu ConnectionStrings:Default.") | `HornViet.Infrastructure/DependencyInjectionRegister.cs` |
+| `Jwt:Issuer`, `Jwt:Audience` | `HonSungViet` | — | Kiểm tra khi xác thực token | `HornViet.Api/Authorization/Authentication.cs` |
 | `Jwt:SecurityKey` | `""` (cố ý để trống) | Khóa dev | Khóa HMAC-SHA256 ký token, **≥ 32 ký tự**. Thiếu/ngắn → không khởi động ("Jwt:SecurityKey phải có tối thiểu 32 ký tự.") | `AuthenticationSetup.AddJwtAuthentication` |
 | `Jwt:ExpirationHours` | `24` | — | Thời hạn token | `TokenService.CreateToken` |
 | `App:CorsOrigins` | `http://localhost:3000,http://localhost:3001` | — | Danh sách origin được gọi API, cách nhau dấu phẩy. Chỉ nạp lúc khởi động | `Program.cs` (`AddCors`) |
@@ -50,9 +50,9 @@ flowchart LR
 | `App:AdminRootAddress` | `http://localhost:3001/` | — | Gốc link đặt lại mật khẩu cho Nhân viên / Quản trị viên | `AccountAppService.ForgotPasswordAsync` |
 | `App:ServerRootAddress` | `https://localhost:44311/` | — | Có trong file cấu hình nhưng hiện không được code nào đọc | — |
 | `Database:MigrateOnStartup` | `false` | `true` | `true` = lúc khởi động áp migration và chạy `DataSeeder` | `Program.cs` |
-| `Seed:AdminPassword`, `Seed:StaffPassword` | (không có mục `Seed` → mặc định trong code `123qwe`) | `123qwe` | Mật khẩu tài khoản demo khi seed tạo mới | `Website.Application/DataSeeder.cs` (`SeedOptions`) |
+| `Seed:AdminPassword`, `Seed:StaffPassword` | (không có mục `Seed` → mặc định trong code `123qwe`) | `123qwe` | Mật khẩu tài khoản demo khi seed tạo mới | `HornViet.Application/DataSeeder.cs` (`SeedOptions`) |
 | `Seed:SampleCatalog` | (mặc định trong code `true`) | `true` | Tạo danh mục/nguyên liệu/sản phẩm mẫu nếu chưa có danh mục | `DataSeeder.SeedCatalogAsync` |
-| `Smtp:Host` | `""` | — | Máy chủ SMTP; trống = không gửi thật, lưu file `.eml` | `Website.Infrastructure/Services/SmtpEmailSender.cs` |
+| `Smtp:Host` | `""` | — | Máy chủ SMTP; trống = không gửi thật, lưu file `.eml` | `HornViet.Infrastructure/Services/SmtpEmailSender.cs` |
 | `Smtp:Port` | `587` | — | Cổng SMTP | `SmtpOptions` |
 | `Smtp:EnableSsl` | `true` | — | Bật TLS (STARTTLS trên cổng 587) | `SmtpOptions` |
 | `Smtp:UserName`, `Smtp:Password` | `""` | — | Tài khoản đăng nhập SMTP (Gmail: địa chỉ Gmail + App Password) | `SmtpOptions` |
@@ -68,12 +68,12 @@ Khóa JWT trong `appsettings.Development.json` chỉ dùng cho máy dev; **khôn
 Chạy ở thư mục gốc repo backend:
 
 ```bash
-dotnet user-secrets list --project Website.Api
-dotnet user-secrets set "Smtp:Host" "smtp.gmail.com" --project Website.Api
-dotnet user-secrets remove "Smtp:Host" --project Website.Api
+dotnet user-secrets list --project HornViet.Api
+dotnet user-secrets set "Smtp:Host" "smtp.gmail.com" --project HornViet.Api
+dotnet user-secrets remove "Smtp:Host" --project HornViet.Api
 ```
 
-Trong Visual Studio: chuột phải project `Website.Api` → **Manage User Secrets** để sửa trực tiếp file `secrets.json`. User-secrets chỉ được nạp khi môi trường là `Development`.
+Trong Visual Studio: chuột phải project `HornViet.Api` → **Manage User Secrets** để sửa trực tiếp file `secrets.json`. User-secrets chỉ được nạp khi môi trường là `Development`.
 
 ### 3.4 Email & link đặt lại mật khẩu
 
@@ -109,9 +109,9 @@ Người dùng tự thực hiện bằng tài khoản Google của mình; **khô
 3. Đặt cấu hình bằng user-secrets (dev) — thay giá trị trong `<...>` bằng của bạn:
 
    ```bash
-   dotnet user-secrets set "Smtp:Host" "smtp.gmail.com" --project Website.Api
-   dotnet user-secrets set "Smtp:UserName" "<dia-chi>@gmail.com" --project Website.Api
-   dotnet user-secrets set "Smtp:Password" "<app-password-16-ky-tu>" --project Website.Api
+   dotnet user-secrets set "Smtp:Host" "smtp.gmail.com" --project HornViet.Api
+   dotnet user-secrets set "Smtp:UserName" "<dia-chi>@gmail.com" --project HornViet.Api
+   dotnet user-secrets set "Smtp:Password" "<app-password-16-ky-tu>" --project HornViet.Api
    ```
 
    Ở production, đặt bằng biến môi trường `Smtp__Host`, `Smtp__UserName`, `Smtp__Password` (và `Smtp__FromAddress` nếu cần).
@@ -132,14 +132,14 @@ Người dùng tự thực hiện bằng tài khoản Google của mình; **khô
 |---|---|
 | API tải ảnh | `POST /api/services/app/File/UploadImage` (Nhân viên, Quản trị viên), trường `file` |
 | Ràng buộc | `.jpg`, `.jpeg`, `.png`, `.webp`, content-type `image/*`, ≤ 5 MB |
-| Nơi lưu | `<WebRootPath>/uploads/{yyyyMM}/{guid}.{ext}` — ở máy dev là `Website.Api/wwwroot/uploads/` |
+| Nơi lưu | `<WebRootPath>/uploads/{yyyyMM}/{guid}.{ext}` — ở máy dev là `HornViet.Api/wwwroot/uploads/` |
 | URL trả về | `/uploads/{yyyyMM}/{guid}.{ext}` (tương đối), frontend ghép với `NEXT_PUBLIC_API_BASE_URL` |
 | Phục vụ file | `app.UseStaticFiles()` trong `Program.cs`; thẻ `<img>` không cần CORS |
-| Git | `.gitignore` bỏ qua `Website.Api/wwwroot/uploads/*`, chỉ giữ `uploads/sample/` (ảnh mẫu `placeholder.svg` của seed) |
+| Git | `.gitignore` bỏ qua `HornViet.Api/wwwroot/uploads/*`, chỉ giữ `uploads/sample/` (ảnh mẫu `placeholder.svg` của seed) |
 
 Khi triển khai: thư mục `uploads` chứa dữ liệu thật — không xóa khi cập nhật bản mới, và sao lưu cùng database. Tài khoản chạy ứng dụng cần quyền ghi vào `wwwroot/uploads`.
 
-Mã nguồn: `Website.Api/Controllers/Admin/FileController.cs`.
+Mã nguồn: `HornViet.Api/Controllers/Admin/FileController.cs`.
 
 ## 4. Cấu hình frontend
 
@@ -162,7 +162,7 @@ Hai repo đọc biến môi trường từ `.env.local` (tạo từ `.env.exampl
 flowchart LR
     B["Trình duyệt"] -->|"HTTPS"| S["shop.example.com<br/>HornViet_customer - next start"]
     B -->|"HTTPS"| AD["admin.example.com<br/>HornViet_admin - next start -p 3001"]
-    B -->|"HTTPS fetch + img"| API["api.example.com<br/>Website.Api - Kestrel"]
+    B -->|"HTTPS fetch + img"| API["api.example.com<br/>HornViet.Api - Kestrel"]
     API --> DB[("SQL Server")]
     API --> SMTP["SMTP"]
     API --> UP["wwwroot/uploads"]
@@ -178,7 +178,7 @@ Tên miền trên chỉ là ví dụ. Code không cấu hình reverse proxy hay 
 2. **Publish:**
 
    ```bash
-   dotnet publish Website.Api -c Release -o ./publish
+   dotnet publish HornViet.Api -c Release -o ./publish
    ```
 
 3. **Đặt biến môi trường** trên máy chủ (giá trị trong `<...>` là ví dụ):
@@ -193,7 +193,7 @@ Tên miền trên chỉ là ví dụ. Code không cấu hình reverse proxy hay 
    | `App__AdminRootAddress` | `https://admin.example.com/` |
    | `Smtp__Host`, `Smtp__UserName`, `Smtp__Password`, `Smtp__FromAddress` | Theo nhà cung cấp email |
 
-4. **Chạy:** `dotnet Website.Api.dll` trong thư mục `publish` (hoặc cấu hình dịch vụ/IIS tương đương).
+4. **Chạy:** `dotnet HornViet.Api.dll` trong thư mục `publish` (hoặc cấu hình dịch vụ/IIS tương đương).
 5. **Kiểm tra:** Swagger chỉ bật ở Development, nên ở Production thử bằng một lời gọi công khai, VD `GET /api/services/app/Category/GetAll` phải trả `success: true`.
 
 Lưu ý giờ hệ thống: backend dùng `DateTime.Now` (giờ máy chủ) cho `CreationTime`, thống kê theo ngày và hạn mã đặt lại mật khẩu. Máy chủ cần đặt múi giờ Việt Nam (UTC+7) để ngày đặt hàng và báo cáo đúng.
@@ -248,20 +248,20 @@ Ghi chú:
 
 ### 7.1 Unit test
 
-Project `tests/Website.Domain.UnitTests` (xUnit, chỉ tham chiếu `Website.Domain`) kiểm thử quy tắc nghiệp vụ: giỏ hàng, biến thể/tồn kho, phiếu nhập/giá vốn, máy trạng thái đơn, `ValueObject`, mã đặt lại mật khẩu, vai trò, người dùng.
+Project `tests/HornViet.Domain.UnitTests` (xUnit, chỉ tham chiếu `HornViet.Domain`) kiểm thử quy tắc nghiệp vụ: giỏ hàng, biến thể/tồn kho, phiếu nhập/giá vốn, máy trạng thái đơn, `ValueObject`, mã đặt lại mật khẩu, vai trò, người dùng.
 
 ```bash
-dotnet test tests/Website.Domain.UnitTests
+dotnet test tests/HornViet.Domain.UnitTests
 ```
 
 Test không cần SQL Server. Frontend: `HornViet_admin` có `npm run typecheck` (`tsc --noEmit`) để kiểm tra kiểu.
 
 ### 7.2 Debug bằng Visual Studio
 
-1. Mở `Website.Api.slnx`, đặt `Website.Api` làm Startup Project, chọn profile **https**.
+1. Mở `HornViet.slnx`, đặt `HornViet.Api` làm Startup Project, chọn profile **https**.
 2. Nhấn **F5**: trình duyệt mở `https://localhost:44311/swagger`. Lần đầu có thể được hỏi tin chứng chỉ dev — chọn đồng ý (hoặc chạy `dotnet dev-certs https --trust`).
 3. Trên Swagger, gọi `POST /api/TokenAuth/AuthenticateAdmin` với `admin / 123qwe`, copy `accessToken`, bấm **Authorize** để thử các API cần đăng nhập.
-4. Lỗi nghiệp vụ (sai mật khẩu, hết hàng…) được `WebsiteBaseController.Run` bắt ngay trong code dự án nên Visual Studio không dừng ở "Exception User-Unhandled". Muốn dừng tại nơi ném lỗi, bật `UserFriendlyException` trong cửa sổ **Exception Settings**.
+4. Lỗi nghiệp vụ (sai mật khẩu, hết hàng…) được `HornVietBaseController.Run` bắt ngay trong code dự án nên Visual Studio không dừng ở "Exception User-Unhandled". Muốn dừng tại nơi ném lỗi, bật `UserFriendlyException` trong cửa sổ **Exception Settings**.
 5. Chạy song song hai frontend (`npm run dev`) để debug cả luồng; đặt breakpoint trong Application Service tương ứng.
 
 ## 8. Xử lý sự cố thường gặp
@@ -276,7 +276,7 @@ Test không cần SQL Server. Frontend: `HornViet_admin` có `npm run typecheck`
 | HTTP 403 "Bạn không có quyền thực hiện chức năng này." | Token hợp lệ nhưng thiếu vai trò (VD Nhân viên gọi `Statistic/GetRevenue`) | Đúng thiết kế; dùng tài khoản đủ quyền |
 | Đăng nhập trang quản trị báo "Tài khoản không có quyền truy cập trang quản trị." | Tài khoản Khách hàng dùng `AuthenticateAdmin` | Dùng tài khoản Staff/Admin |
 | Lỗi migration lúc khởi động / `dotnet ef` | Database tạo bằng cách khác, thiếu `__EFMigrationsHistory`, collation sai, thiếu `-I` khi chạy script | Xem mục 8 của [Cơ sở dữ liệu](10-co-so-du-lieu.md#8-lỗi-thường-gặp--cách-xử-lý) |
-| Quên mật khẩu: không có email nào | `Smtp:Host` trống → email nằm ở file `.eml` trong `Website.Api/App_Data/mails/` (đường dẫn in ở log) | Mở file `.eml` lấy link, hoặc cấu hình SMTP |
+| Quên mật khẩu: không có email nào | `Smtp:Host` trống → email nằm ở file `.eml` trong `HornViet.Api/App_Data/mails/` (đường dẫn in ở log) | Mở file `.eml` lấy link, hoặc cấu hình SMTP |
 | Quên mật khẩu: log `Không gửi được email đặt lại mật khẩu ...` với lỗi xác thực (VD `5.7.0 Authentication Required`, `535`) | Sai `Smtp:UserName` / `Smtp:Password`, dùng mật khẩu Gmail thường thay vì App Password, chưa bật Xác minh 2 bước | Tạo lại App Password, đặt lại user-secrets |
 | Quên mật khẩu: log lỗi khi dùng cổng 465 | `System.Net.Mail.SmtpClient` không hỗ trợ SSL ngầm định (cổng 465) | Dùng cổng `587` với `EnableSsl = true` |
 | Quên mật khẩu: log `Thiếu cấu hình App:ClientRootAddress / App:AdminRootAddress.` | Hai khóa `App:*RootAddress` trống | Đặt địa chỉ hai frontend |
@@ -289,16 +289,16 @@ Test không cần SQL Server. Frontend: `HornViet_admin` có `npm run typecheck`
 
 | Nội dung | Đường dẫn |
 |---|---|
-| Khởi động, CORS, Swagger, MigrateOnStartup, cảnh báo cấu hình email | `Website.Api/Program.cs` |
-| Cấu hình | `Website.Api/appsettings.json`, `Website.Api/appsettings.Development.json`, `Website.Api/Properties/launchSettings.json` |
-| `UserSecretsId` | `Website.Api/Website.Api.csproj` |
-| JWT, chính sách phân quyền | `Website.Api/Authorization/Authentication.cs` |
-| Đăng ký DbContext, email | `Website.Infrastructure/DependencyInjectionRegister.cs` |
-| Gửi email, `SmtpOptions` | `Website.Infrastructure/Services/SmtpEmailSender.cs` |
-| Địa chỉ frontend cho link email | `Website.Application/Common/AppUrlOptions.cs`, `Website.Application/Accounts/AccountAppService.cs` |
-| Seed, `SeedOptions` | `Website.Application/DataSeeder.cs` |
-| Tải ảnh | `Website.Api/Controllers/Admin/FileController.cs` |
+| Khởi động, CORS, Swagger, MigrateOnStartup, cảnh báo cấu hình email | `HornViet.Api/Program.cs` |
+| Cấu hình | `HornViet.Api/appsettings.json`, `HornViet.Api/appsettings.Development.json`, `HornViet.Api/Properties/launchSettings.json` |
+| `UserSecretsId` | `HornViet.Api/HornViet.Api.csproj` |
+| JWT, chính sách phân quyền | `HornViet.Api/Authorization/Authentication.cs` |
+| Đăng ký DbContext, email | `HornViet.Infrastructure/DependencyInjectionRegister.cs` |
+| Gửi email, `SmtpOptions` | `HornViet.Infrastructure/Services/SmtpEmailSender.cs` |
+| Địa chỉ frontend cho link email | `HornViet.Application/Common/AppUrlOptions.cs`, `HornViet.Application/Accounts/AccountAppService.cs` |
+| Seed, `SeedOptions` | `HornViet.Application/DataSeeder.cs` |
+| Tải ảnh | `HornViet.Api/Controllers/Admin/FileController.cs` |
 | Công cụ EF | `dotnet-tools.json` |
-| Unit test | `tests/Website.Domain.UnitTests/` |
+| Unit test | `tests/HornViet.Domain.UnitTests/` |
 | Biến môi trường frontend | `HornViet_admin/.env.example`, `HornViet_customer/.env.example`, `HornViet_admin/lib/api/http.ts`, `HornViet_customer/lib/api/http.ts` |
 | Script & cấu hình build frontend | `HornViet_admin/package.json`, `HornViet_admin/next.config.mjs`, `HornViet_customer/package.json`, `HornViet_customer/next.config.mjs` |

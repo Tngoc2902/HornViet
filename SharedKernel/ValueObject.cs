@@ -4,7 +4,7 @@
 // Value Object thường bất biến (immutable) — muốn đổi giá trị thì tạo đối tượng mới.
 // Hiện tại chưa có lớp nào trong tầng Domain kế thừa ValueObject; lớp này được chuẩn bị sẵn và được kiểm thử
 // trong ValueObjectTests (dùng lớp Money mẫu).
-namespace Website.Domain.SharedKernel;
+namespace HornViet.Domain.SharedKernel;
 
 // IEquatable<ValueObject>: interface chuẩn của .NET, cam kết lớp có phương thức Equals(ValueObject?) so sánh
 // bằng nhau theo kiểu mạnh (không cần ép kiểu từ object).

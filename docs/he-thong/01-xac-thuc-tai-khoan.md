@@ -48,7 +48,7 @@ Tài khoản tự đăng ký luôn chỉ có vai trò `Customer`. Chi tiết vai
 
 | Quy tắc | Backend | Frontend (kiểm tra sớm) |
 |---|---|---|
-| Mật khẩu ≥ 6 ký tự, có cả chữ và số | `PasswordPolicy.Validate` (`Website.Application/Accounts/AccountAppService.cs`) dùng `char.IsLetter` / `char.IsDigit` → lỗi "Mật khẩu phải có ít nhất 6 ký tự, gồm cả chữ và số." | `isStrongPassword` (`lib/hsv/validation.ts`) — chữ chỉ tính `a-z`, `A-Z` |
+| Mật khẩu ≥ 6 ký tự, có cả chữ và số | `PasswordPolicy.Validate` (`HornViet.Application/Accounts/AccountAppService.cs`) dùng `char.IsLetter` / `char.IsDigit` → lỗi "Mật khẩu phải có ít nhất 6 ký tự, gồm cả chữ và số." | `isStrongPassword` (`lib/hsv/validation.ts`) — chữ chỉ tính `a-z`, `A-Z` |
 | Số điện thoại di động VN | Regex `AppConsts.PhoneRegex` = `^(0\|\+84)(3\|5\|7\|8\|9)\d{8}$` | `PHONE_RE` = `^(0\|\+84)\d{9}$` (lỏng hơn, sau khi bỏ khoảng trắng) |
 | Email | `[EmailAddress]` | `EMAIL_RE` = `^[^@\s]+@[^@\s]+\.[^@\s]+$` |
 | Họ tên | Bắt buộc, tối đa 64 ký tự | Bắt buộc |
@@ -56,11 +56,11 @@ Tài khoản tự đăng ký luôn chỉ có vai trò `Customer`. Chi tiết vai
 
 `PasswordPolicy.Validate` dùng chung cho: Đăng ký, Đặt lại mật khẩu qua email, Đổi mật khẩu, Admin tạo tài khoản và Admin đặt lại mật khẩu hộ.
 
-Lỗi DataAnnotations (`[Required]`, `[EmailAddress]`, `[RegularExpression]`...) bị ASP.NET Core chặn trước khi vào service và trả HTTP 400 với `error.message = "Dữ liệu không hợp lệ."` cùng `error.validationErrors[]` (mỗi phần tử có `members` là tên trường camelCase) — xem `ValidationResponse` trong `Website.Api/Middlewares/ResponseHandling.cs`. Frontend gom lỗi theo trường bằng `ApiError.fieldErrors()`.
+Lỗi DataAnnotations (`[Required]`, `[EmailAddress]`, `[RegularExpression]`...) bị ASP.NET Core chặn trước khi vào service và trả HTTP 400 với `error.message = "Dữ liệu không hợp lệ."` cùng `error.validationErrors[]` (mỗi phần tử có `members` là tên trường camelCase) — xem `ValidationResponse` trong `HornViet.Api/Middlewares/ResponseHandling.cs`. Frontend gom lỗi theo trường bằng `ApiError.fieldErrors()`.
 
 ### 3.3 JWT
 
-Token được tạo trong `TokenService.CreateToken` (`Website.Api/Authorization/Authentication.cs`), ký HMAC-SHA256 bằng `Jwt:SecurityKey` (bắt buộc ≥ 32 ký tự, nếu thiếu ứng dụng không khởi động).
+Token được tạo trong `TokenService.CreateToken` (`HornViet.Api/Authorization/Authentication.cs`), ký HMAC-SHA256 bằng `Jwt:SecurityKey` (bắt buộc ≥ 32 ký tự, nếu thiếu ứng dụng không khởi động).
 
 | Claim | Giá trị |
 |---|---|
@@ -110,7 +110,7 @@ Lưu ý: vì khóa tài khoản không đổi dấu, nếu Admin **mở khóa** 
 
 ### 3.6 Gửi email (SMTP)
 
-`IEmailSender` (`Website.Application/Common/Interfaces/IEmailSender.cs`) được cài đặt bởi `SmtpEmailSender` (`Website.Infrastructure/Services/SmtpEmailSender.cs`), cấu hình ở mục `Smtp` (`SmtpOptions`):
+`IEmailSender` (`HornViet.Application/Common/Interfaces/IEmailSender.cs`) được cài đặt bởi `SmtpEmailSender` (`HornViet.Infrastructure/Services/SmtpEmailSender.cs`), cấu hình ở mục `Smtp` (`SmtpOptions`):
 
 | Trường hợp | Hành vi |
 |---|---|
@@ -189,9 +189,9 @@ sequenceDiagram
     end
 ```
 
-1. `ValidateCredentialsAsync` (`Website.Application/Accounts/AccountAppService.cs`) tìm user theo `UserName == login` hoặc `EmailAddress == login.ToLower()`, kèm vai trò. Sai tên đăng nhập và sai mật khẩu dùng **cùng một thông báo** để không lộ tài khoản nào tồn tại. Kiểm tra `IsActive` được thực hiện **sau** khi mật khẩu đúng.
+1. `ValidateCredentialsAsync` (`HornViet.Application/Accounts/AccountAppService.cs`) tìm user theo `UserName == login` hoặc `EmailAddress == login.ToLower()`, kèm vai trò. Sai tên đăng nhập và sai mật khẩu dùng **cùng một thông báo** để không lộ tài khoản nào tồn tại. Kiểm tra `IsActive` được thực hiện **sau** khi mật khẩu đúng.
 2. `TokenAuthController.Authenticate` cấp token cho mọi vai trò. `AuthenticateAdmin` từ chối (400) nếu không có `Admin` hoặc `Staff`.
-3. Kết quả `AuthenticateResultModel` (`Website.Api/Models/Account/AuthenticateResultModel.cs`): `accessToken, expireInSeconds, userId, userName, name, roles`.
+3. Kết quả `AuthenticateResultModel` (`HornViet.Api/Models/Account/AuthenticateResultModel.cs`): `accessToken, expireInSeconds, userId, userName, name, roles`.
 4. Frontend `login()` trong `contexts/auth-context.tsx`:
    - Cửa hàng: nếu `roles` có `Admin`/`Staff` → ném `ApiError(403, STAFF_ACCOUNT_MESSAGE)`, **không lưu** token; trang `/login` hiện hướng dẫn sang trang quản trị (link từ `NEXT_PUBLIC_ADMIN_URL` nếu có).
    - Quản trị: nếu không có `Admin`/`Staff` → `ApiError(403, NOT_STAFF_MESSAGE)` (kiểm tra lặp lại cho chắc chắn).
@@ -360,7 +360,7 @@ Mọi response được bọc theo định dạng ABP `{ result, success, error,
 
 ## 7. Dữ liệu
 
-Chi tiết toàn bộ lược đồ: [10-co-so-du-lieu.md](10-co-so-du-lieu.md). Cấu hình EF Core trong `Website.Infrastructure/Persistence/WebsiteDbContext.cs`.
+Chi tiết toàn bộ lược đồ: [10-co-so-du-lieu.md](10-co-so-du-lieu.md). Cấu hình EF Core trong `HornViet.Infrastructure/Persistence/HornVietDbContext.cs`.
 
 **`AbpUsers`** (thực thể `User`, có xóa mềm)
 
@@ -423,28 +423,28 @@ Vai trò của tài khoản nằm ở `AbpRoles` / `AbpUserRoles` — xem [02-ph
 
 ## 9. Mã nguồn liên quan
 
-**Backend** (`Website.Api`)
+**Backend** (`HornViet.Api`)
 
 | File | Nội dung |
 |---|---|
-| `Website.Application/Accounts/AccountAppService.cs` | `RegisterInput`, `AuthenticateModel`, `ForgotPasswordInput`, `ResetPasswordInput`, `AuthenticatedUser`, `AccountAppService`, `PasswordPolicy` |
-| `Website.Application/Profiles/ProfileAppService.cs` | Hồ sơ, đổi mật khẩu, sổ địa chỉ |
-| `Website.Application/Common/Interfaces/IAppSession.cs` | `IAppSession`, `GetUserId()`, `IsManagement()` |
-| `Website.Application/Common/Interfaces/IEmailSender.cs` | Interface gửi email |
-| `Website.Application/Common/AppUrlOptions.cs` | `App:ClientRootAddress`, `App:AdminRootAddress` |
-| `Website.Domain/AppConsts.cs` | `PhoneRegex`, `PasswordResetTokenLifetimeMinutes`, `PasswordResetResendSeconds` |
-| `Website.Domain/Users/Entities/User.cs` | `User` (`SecurityStamp`, `RotateSecurityStamp`), `Role`, `UserRole`, `UserAddress` |
-| `Website.Domain/Users/Entities/PasswordResetToken.cs` | `Issue`, `Hash`, `IsUsable`, `MarkUsed`, `Revoke`, `InvalidMessage` |
-| `Website.Api/Authorization/Authentication.cs` | `JwtOptions`, `TokenService`, `HttpContextAppSession`, cấu hình JwtBearer (`OnTokenValidated`, `OnChallenge`, `OnForbidden`), policy |
-| `Website.Api/Controllers/Account/TokenAuthController.cs` | `Authenticate`, `AuthenticateAdmin` |
-| `Website.Api/Controllers/Account/AccountController.cs` | `Register`, `ForgotPassword`, `ResetPassword` |
-| `Website.Api/Controllers/Account/ProfileController.cs` | API hồ sơ và sổ địa chỉ |
-| `Website.Api/Models/Account/AuthenticateResultModel.cs` | Kết quả đăng nhập |
-| `Website.Api/Middlewares/ResponseHandling.cs` | `BusinessErrors`, `ExceptionHandlingMiddleware`, `ValidationResponse` |
-| `Website.Infrastructure/Services/SmtpEmailSender.cs` | `SmtpOptions`, `SmtpEmailSender` |
-| `Website.Infrastructure/Persistence/WebsiteDbContext.cs` | Ánh xạ bảng `AbpUsers`, `UserAddresses`, `PasswordResetTokens` |
-| `Website.Api/Program.cs` | Đăng ký `AppUrlOptions`, JWT, cảnh báo cấu hình SMTP |
-| `tests/Website.Domain.UnitTests/Users/PasswordResetTokenTests.cs`, `UserTests.cs` | Kiểm thử domain |
+| `HornViet.Application/Accounts/AccountAppService.cs` | `RegisterInput`, `AuthenticateModel`, `ForgotPasswordInput`, `ResetPasswordInput`, `AuthenticatedUser`, `AccountAppService`, `PasswordPolicy` |
+| `HornViet.Application/Profiles/ProfileAppService.cs` | Hồ sơ, đổi mật khẩu, sổ địa chỉ |
+| `HornViet.Application/Common/Interfaces/IAppSession.cs` | `IAppSession`, `GetUserId()`, `IsManagement()` |
+| `HornViet.Application/Common/Interfaces/IEmailSender.cs` | Interface gửi email |
+| `HornViet.Application/Common/AppUrlOptions.cs` | `App:ClientRootAddress`, `App:AdminRootAddress` |
+| `HornViet.Domain/AppConsts.cs` | `PhoneRegex`, `PasswordResetTokenLifetimeMinutes`, `PasswordResetResendSeconds` |
+| `HornViet.Domain/Users/Entities/User.cs` | `User` (`SecurityStamp`, `RotateSecurityStamp`), `Role`, `UserRole`, `UserAddress` |
+| `HornViet.Domain/Users/Entities/PasswordResetToken.cs` | `Issue`, `Hash`, `IsUsable`, `MarkUsed`, `Revoke`, `InvalidMessage` |
+| `HornViet.Api/Authorization/Authentication.cs` | `JwtOptions`, `TokenService`, `HttpContextAppSession`, cấu hình JwtBearer (`OnTokenValidated`, `OnChallenge`, `OnForbidden`), policy |
+| `HornViet.Api/Controllers/Account/TokenAuthController.cs` | `Authenticate`, `AuthenticateAdmin` |
+| `HornViet.Api/Controllers/Account/AccountController.cs` | `Register`, `ForgotPassword`, `ResetPassword` |
+| `HornViet.Api/Controllers/Account/ProfileController.cs` | API hồ sơ và sổ địa chỉ |
+| `HornViet.Api/Models/Account/AuthenticateResultModel.cs` | Kết quả đăng nhập |
+| `HornViet.Api/Middlewares/ResponseHandling.cs` | `BusinessErrors`, `ExceptionHandlingMiddleware`, `ValidationResponse` |
+| `HornViet.Infrastructure/Services/SmtpEmailSender.cs` | `SmtpOptions`, `SmtpEmailSender` |
+| `HornViet.Infrastructure/Persistence/HornVietDbContext.cs` | Ánh xạ bảng `AbpUsers`, `UserAddresses`, `PasswordResetTokens` |
+| `HornViet.Api/Program.cs` | Đăng ký `AppUrlOptions`, JWT, cảnh báo cấu hình SMTP |
+| `tests/HornViet.Domain.UnitTests/Users/PasswordResetTokenTests.cs`, `UserTests.cs` | Kiểm thử domain |
 
 **Frontend**
 

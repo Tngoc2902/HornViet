@@ -51,7 +51,7 @@ flowchart LR
 | **Tồn kho** | `StockQuantity` của từng biến thể, setter `private` — chỉ đổi qua các phương thức nghiệp vụ (mục 3.3). Tổng tồn kho của sản phẩm = tổng tồn của các biến thể chưa xóa. | `ProductVariant` |
 | **Ảnh** | `MainImage` (ảnh đại diện, 1 URL) + `Images` (bộ ảnh chi tiết, bảng `ProductImages`, sắp theo `DisplayOrder`). | `Product`, `ProductImage` |
 | **Ẩn / hiện** | `IsActive = false`: không hiện ở cửa hàng, khách gọi `Product/Get` nhận 404, không thêm vào giỏ / đặt hàng được; vẫn quản lý được ở trang quản trị. | `ProductAppService`, `CartAppService`, `OrderAppService` |
-| **Xóa mềm** | `IsDeleted = true` cho sản phẩm hoặc biến thể. Bộ lọc toàn cục loại bản ghi đã xóa khỏi mọi truy vấn (cả trang quản trị). Lịch sử đơn vẫn giữ vì `OrderItems` lưu tên sản phẩm, tên biến thể, đơn giá lúc mua. | `WebsiteDbContext`, `Repository.Delete` |
+| **Xóa mềm** | `IsDeleted = true` cho sản phẩm hoặc biến thể. Bộ lọc toàn cục loại bản ghi đã xóa khỏi mọi truy vấn (cả trang quản trị). Lịch sử đơn vẫn giữ vì `OrderItems` lưu tên sản phẩm, tên biến thể, đơn giá lúc mua. | `HornVietDbContext`, `Repository.Delete` |
 | **Giá vốn bình quân** | `AverageCost` (decimal(18,4), null nếu chưa có phiếu nhập). Chỉ phiếu nhập kho làm đổi giá trị này. | Xem [Nhập kho & giá vốn](07-nhap-kho-gia-von.md) |
 
 ### 3.2 Quy tắc sản phẩm & biến thể
@@ -77,9 +77,9 @@ flowchart LR
 | `IncreaseStock(quantity)` | Hủy đơn — hoàn kho (`OrderAppService.RestockAsync`, kể cả biến thể đã xóa mềm) | `quantity ≤ 0` thì bỏ qua (không báo lỗi) |
 | `ReceiveStock(quantity, unitCost)` | Phiếu nhập kho (chỉ Quản trị viên) | Cộng tồn và tính lại giá vốn bình quân — xem [07](07-nhap-kho-gia-von.md) |
 
-**Chống bán vượt tồn (RowVersion).** Cột `ProductVariants.RowVersion` là `rowversion` (`IsRowVersion()`), SQL Server tự đổi mỗi khi dòng bị cập nhật. EF Core thêm điều kiện `WHERE RowVersion = <giá trị đã đọc>` vào lệnh `UPDATE`. Nếu hai giao dịch cùng đọc một biến thể rồi cùng trừ kho, giao dịch lưu sau không cập nhật được dòng nào → `DbUpdateConcurrencyException` → **HTTP 409** `Dữ liệu (tồn kho) vừa được cập nhật bởi giao dịch khác. Vui lòng tải lại và thử lại.` (`BusinessErrors.TryMap` trong `Website.Api/Middlewares/ResponseHandling.cs`). Lỗi này cũng có thể xảy ra khi lưu form sản phẩm đúng lúc có đơn hàng trừ kho cùng biến thể.
+**Chống bán vượt tồn (RowVersion).** Cột `ProductVariants.RowVersion` là `rowversion` (`IsRowVersion()`), SQL Server tự đổi mỗi khi dòng bị cập nhật. EF Core thêm điều kiện `WHERE RowVersion = <giá trị đã đọc>` vào lệnh `UPDATE`. Nếu hai giao dịch cùng đọc một biến thể rồi cùng trừ kho, giao dịch lưu sau không cập nhật được dòng nào → `DbUpdateConcurrencyException` → **HTTP 409** `Dữ liệu (tồn kho) vừa được cập nhật bởi giao dịch khác. Vui lòng tải lại và thử lại.` (`BusinessErrors.TryMap` trong `HornViet.Api/Middlewares/ResponseHandling.cs`). Lỗi này cũng có thể xảy ra khi lưu form sản phẩm đúng lúc có đơn hàng trừ kho cùng biến thể.
 
-**Sắp hết hàng.** `AppConsts.LowStockThreshold = 5` (`Website.Domain/AppConsts.cs`): biến thể có `StockQuantity ≤ 5` được gắn `isLowStock = true` (kể cả khi bằng 0). Trang quản trị dùng hằng số trùng giá trị `LOW_STOCK_THRESHOLD = 5` (`HornViet_admin/lib/hsv/format.ts`).
+**Sắp hết hàng.** `AppConsts.LowStockThreshold = 5` (`HornViet.Domain/AppConsts.cs`): biến thể có `StockQuantity ≤ 5` được gắn `isLowStock = true` (kể cả khi bằng 0). Trang quản trị dùng hằng số trùng giá trị `LOW_STOCK_THRESHOLD = 5` (`HornViet_admin/lib/hsv/format.ts`).
 
 ## 4. Flow logic
 
@@ -110,9 +110,9 @@ sequenceDiagram
 | 1 | Ô tìm kiếm ở header chuyển tới `/products?q=<từ khóa>`. Bộ lọc lưu trên URL: `cat=1,3`, `mat=2`, `price=lt200 / 200to500 / gt500`, `sort=asc / desc / best`, `page`. | `HornViet_customer/components/hsv/store-header.tsx`, `HornViet_customer/app/(store)/products/page.tsx` |
 | 2 | Mỗi khi URL đổi, gọi `productApi.getAll` với `maxResultCount = 9`. | `products/page.tsx` |
 | 3 | Chỉ lấy `IsActive = true` (sản phẩm đã xóa bị bộ lọc toàn cục loại). | `GetAllAsync` |
-| 4 | **Từ khóa**: tìm chuỗi con (`Contains` → `LIKE`) trong tên sản phẩm, tên danh mục, tên nguyên liệu. CSDL dùng collation `Latin1_General_100_CI_AI` nên **không phân biệt hoa thường và dấu** (gõ "luoc sung" vẫn ra "Lược sừng"). | `GetAllAsync`; `WebsiteDbContext.OnModelCreating` (`UseCollation`) |
+| 4 | **Từ khóa**: tìm chuỗi con (`Contains` → `LIKE`) trong tên sản phẩm, tên danh mục, tên nguyên liệu. CSDL dùng collation `Latin1_General_100_CI_AI` nên **không phân biệt hoa thường và dấu** (gõ "luoc sung" vẫn ra "Lược sừng"). | `GetAllAsync`; `HornVietDbContext.OnModelCreating` (`UseCollation`) |
 | 5 | **Lọc**: `categoryIds` (thuộc một trong các danh mục), `materialIds`, `minPrice` / `maxPrice` (bao gồm hai đầu), `inStockOnly` (có ít nhất một biến thể tồn > 0). | `GetAllAsync` |
-| 6 | **Sắp xếp**: luôn xếp sản phẩm còn hàng trước, sau đó theo `ProductSorting`, cuối cùng theo `Id`. | `GetAllAsync`, `Website.Application/Catalog/Enums/ProductSorting.cs` |
+| 6 | **Sắp xếp**: luôn xếp sản phẩm còn hàng trước, sau đó theo `ProductSorting`, cuối cùng theo `Id`. | `GetAllAsync`, `HornViet.Application/Catalog/Enums/ProductSorting.cs` |
 | 7 | Trả `ProductListItemDto`: `totalStock`, `inStock`, tên danh mục / nguyên liệu. | `ProductDtos.cs` |
 
 Các kiểu sắp xếp `ProductSorting`:
@@ -190,14 +190,14 @@ sequenceDiagram
 |---|---|---|
 | 1 | Mở form: `/products?edit=new` (thêm) hoặc `/products?edit={id}` (sửa, gọi `Product/Get` để nạp dữ liệu). | `HornViet_admin/app/(panel)/products/page.tsx`, `HornViet_admin/components/hsv/product-form-drawer.tsx` |
 | 2 | Upload từng ảnh: client kiểm tra định dạng (`image/jpeg`, `image/png`, `image/webp`) và ≤ 5 MB, tối đa **6 ảnh** mỗi sản phẩm (giới hạn ở frontend). | `product-form-drawer.tsx` → `onFiles`; `fileApi.uploadImage` |
-| 3 | Server kiểm tra lại: file không rỗng, ≤ 5 MB, đuôi `.jpg/.jpeg/.png/.webp` **và** `Content-Type` bắt đầu bằng `image/`. Lưu vào `wwwroot/uploads/{yyyyMM}/{GUID}{đuôi}` (tên do server sinh để tránh ghi đè và path traversal), trả URL tương đối. Request bị giới hạn `5 MB + 64 KB`. | `Website.Api/Controllers/Admin/FileController.cs` |
+| 3 | Server kiểm tra lại: file không rỗng, ≤ 5 MB, đuôi `.jpg/.jpeg/.png/.webp` **và** `Content-Type` bắt đầu bằng `image/`. Lưu vào `wwwroot/uploads/{yyyyMM}/{GUID}{đuôi}` (tên do server sinh để tránh ghi đè và path traversal), trả URL tương đối. Request bị giới hạn `5 MB + 64 KB`. | `HornViet.Api/Controllers/Admin/FileController.cs` |
 | 4 | Ảnh đầu tiên trong form là **ảnh đại diện** (`mainImage`), các ảnh còn lại gửi trong `images`. Có thể bấm "Làm đại diện" để đổi, "×" để gỡ. | `product-form-drawer.tsx` → `makeMain`, `save` |
 | 5 | Kiểm tra phía client trước khi gửi: tên, danh mục, nguyên liệu, **giá > 0**, ít nhất 1 ảnh, ít nhất 1 biến thể, tồn kho mỗi biến thể ≥ 0, không trùng (kích thước, kiểu dáng). | `product-form-drawer.tsx` → `save` |
 | 6 | Backend kiểm tra DataAnnotations rồi `ValidateAsync`. | `ProductDtos.cs`, `ProductAppService.ValidateAsync` |
 | 7 | Tạo: gán trường, thêm biến thể qua hàm tạo `ProductVariant`, thêm ảnh. Sửa: đồng bộ biến thể (P5), biến thể giữ lại gọi `SetStock`. | `CreateAsync`, `UpdateAsync`, `MapScalarFields` |
 | 8 | Lưu một lần (`SaveChangesAsync`) rồi trả chi tiết mới nhất. | `UpdateAsync` → `GetAsync` |
 
-Ảnh được phục vụ tĩnh qua `app.UseStaticFiles()` (`Website.Api/Program.cs`). Frontend ghép URL tương đối với `NEXT_PUBLIC_API_BASE_URL` khi hiển thị (`assetUrl` trong `lib/api/http.ts`, dùng bởi component `ProductImage`). Gỡ ảnh khỏi sản phẩm chỉ xóa dòng trong `ProductImages`; **file trên đĩa không bị xóa** (không có code xóa file).
+Ảnh được phục vụ tĩnh qua `app.UseStaticFiles()` (`HornViet.Api/Program.cs`). Frontend ghép URL tương đối với `NEXT_PUBLIC_API_BASE_URL` khi hiển thị (`assetUrl` trong `lib/api/http.ts`, dùng bởi component `ProductImage`). Gỡ ảnh khỏi sản phẩm chỉ xóa dòng trong `ProductImages`; **file trên đĩa không bị xóa** (không có code xóa file).
 
 ### 4.4 Ẩn / hiện và xóa sản phẩm
 
@@ -317,7 +317,7 @@ Ví dụ `CreateOrUpdateProductInput` (dữ liệu minh họa):
 | `OrderItems` | `ProductVariantId` (FK, Restrict), `ProductName`, `VariantName`, `UnitPrice`, `UnitCost` | Ảnh chụp lúc mua — không bị ảnh hưởng khi sửa / xóa sản phẩm |
 | `StockReceipts` | `ProductVariantId` (FK, Restrict) | Phiếu nhập kho — xem [07](07-nhap-kho-gia-von.md) |
 
-Thư mục ảnh: `Website.Api/wwwroot/uploads/{yyyyMM}/` (được `.gitignore` bỏ qua, trừ `uploads/sample/`). Cấu hình bảng: `Website.Infrastructure/Persistence/WebsiteDbContext.cs`. Toàn bộ mô hình: [Cơ sở dữ liệu](10-co-so-du-lieu.md).
+Thư mục ảnh: `HornViet.Api/wwwroot/uploads/{yyyyMM}/` (được `.gitignore` bỏ qua, trừ `uploads/sample/`). Cấu hình bảng: `HornViet.Infrastructure/Persistence/HornVietDbContext.cs`. Toàn bộ mô hình: [Cơ sở dữ liệu](10-co-so-du-lieu.md).
 
 ## 8. Lỗi thường gặp & cách xử lý
 
@@ -346,22 +346,22 @@ Lỗi phía client của form quản trị (chưa gọi API): "Vui lòng nhập 
 
 ## 9. Mã nguồn liên quan
 
-**Backend (`Website.Api`)**
+**Backend (`HornViet.Api`)**
 
 | File | Nội dung |
 |---|---|
-| `Website.Domain/Catalog/Entities/Catalog.cs` | `Product`, `ProductVariant` (`DisplayName`, `SetStock`, `DecreaseStock`, `IncreaseStock`, `ReceiveStock`), `ProductImage` |
-| `Website.Domain/AppConsts.cs` | `LowStockThreshold`, `DefaultPageSize`, `MaxPageSize` |
-| `Website.Application/Catalog/ProductAppService.cs` | Logic khách và quản trị |
-| `Website.Application/Catalog/ProductDtos.cs` | Input / DTO, ràng buộc DataAnnotations |
-| `Website.Application/Catalog/Enums/ProductSorting.cs` | Kiểu sắp xếp |
-| `Website.Api/Controllers/Catalog/ProductController.cs` | API sản phẩm |
-| `Website.Api/Controllers/Admin/FileController.cs` | Upload ảnh |
-| `Website.Api/Middlewares/ResponseHandling.cs` | Ánh xạ lỗi 400 / 404 / 409 |
-| `Website.Infrastructure/Persistence/WebsiteDbContext.cs` | Cấu hình bảng, RowVersion, collation, xóa mềm |
-| `Website.Application/Orders/OrderAppService.cs` | Gọi `DecreaseStock` / `IncreaseStock` |
-| `Website.Application/Carts/CartAppService.cs` | Kiểm tra `IsActive`, tồn kho khi thêm giỏ |
-| `tests/Website.Domain.UnitTests/Catalog/ProductVariantTests.cs` | Kiểm thử quy tắc tồn kho, `DisplayName` |
+| `HornViet.Domain/Catalog/Entities/Catalog.cs` | `Product`, `ProductVariant` (`DisplayName`, `SetStock`, `DecreaseStock`, `IncreaseStock`, `ReceiveStock`), `ProductImage` |
+| `HornViet.Domain/AppConsts.cs` | `LowStockThreshold`, `DefaultPageSize`, `MaxPageSize` |
+| `HornViet.Application/Catalog/ProductAppService.cs` | Logic khách và quản trị |
+| `HornViet.Application/Catalog/ProductDtos.cs` | Input / DTO, ràng buộc DataAnnotations |
+| `HornViet.Application/Catalog/Enums/ProductSorting.cs` | Kiểu sắp xếp |
+| `HornViet.Api/Controllers/Catalog/ProductController.cs` | API sản phẩm |
+| `HornViet.Api/Controllers/Admin/FileController.cs` | Upload ảnh |
+| `HornViet.Api/Middlewares/ResponseHandling.cs` | Ánh xạ lỗi 400 / 404 / 409 |
+| `HornViet.Infrastructure/Persistence/HornVietDbContext.cs` | Cấu hình bảng, RowVersion, collation, xóa mềm |
+| `HornViet.Application/Orders/OrderAppService.cs` | Gọi `DecreaseStock` / `IncreaseStock` |
+| `HornViet.Application/Carts/CartAppService.cs` | Kiểm tra `IsActive`, tồn kho khi thêm giỏ |
+| `tests/HornViet.Domain.UnitTests/Catalog/ProductVariantTests.cs` | Kiểm thử quy tắc tồn kho, `DisplayName` |
 
 **Trang quản trị (`HornViet_admin`)**
 

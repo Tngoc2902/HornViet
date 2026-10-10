@@ -20,7 +20,7 @@ Quản trị viên lập phiếu nhập kho (số lượng, giá nhập) cho t�
 | Nhân viên (`Staff`) | Không truy cập được. API trả **403**, menu "Nhập kho" bị ẩn, vào thẳng `/inventory` thấy "Chức năng này chỉ dành cho Quản trị viên". |
 | Khách hàng | Không truy cập được. |
 
-- Backend: `StockReceiptController` gắn `[Authorize(Policy = AuthorizationPolicies.AdminOnly)]` cho cả controller (policy `AdminOnly` = `RequireRole("Admin")`, khai báo trong `Website.Api/Authorization/Authentication.cs`).
+- Backend: `StockReceiptController` gắn `[Authorize(Policy = AuthorizationPolicies.AdminOnly)]` cho cả controller (policy `AdminOnly` = `RequireRole("Admin")`, khai báo trong `HornViet.Api/Authorization/Authentication.cs`).
 - Frontend: mục menu `/inventory` có `adminOnly: true` trong `HornViet_admin/app/(panel)/layout.tsx`.
 - **Giá vốn không bao giờ trả cho khách hoặc Nhân viên**: `AverageCost` và `OrderItem.UnitCost` chỉ xuất hiện trong DTO của `StockReceiptAppService` (Admin) và trong các chỉ số lợi nhuận của `StatisticAppService` (Admin). Các DTO sản phẩm / đơn hàng không có trường giá vốn.
 
@@ -41,7 +41,7 @@ Xem thêm: [Phân quyền người dùng](02-phan-quyen-nguoi-dung.md).
 
 ### 3.2 Công thức bình quân gia quyền di động
 
-Hàm `ProductVariant.MovingAverage` (`Website.Domain/Catalog/Entities/Catalog.cs`):
+Hàm `ProductVariant.MovingAverage` (`HornViet.Domain/Catalog/Entities/Catalog.cs`):
 
 ```
 Giá vốn mới = (Tồn trước × Giá vốn cũ + SL nhập × Giá nhập) / (Tồn trước + SL nhập)
@@ -184,7 +184,7 @@ sequenceDiagram
 | 3 | ASP.NET kiểm tra DataAnnotations; sai → 400 "Dữ liệu không hợp lệ." kèm `validationErrors`. | `CreateStockReceiptInput` |
 | 4 | Tải biến thể (bộ lọc xóa mềm đang bật nên biến thể đã xóa coi như không tồn tại). | `StockReceiptAppService.CreateAsync` |
 | 5 | Tạo phiếu, ghi lại `StockBefore`, `AverageCostBefore`, cập nhật giá vốn và tồn của biến thể. | `StockReceipt.Receive`, `ProductVariant.ReceiveStock`, `ProductVariant.MovingAverage` |
-| 6 | Lưu trong một lần `SaveChangesAsync` (phiếu + biến thể). `CreationTime` gán tự động `DateTime.Now`. | `WebsiteDbContext.ApplyAuditConcepts` |
+| 6 | Lưu trong một lần `SaveChangesAsync` (phiếu + biến thể). `CreationTime` gán tự động `DateTime.Now`. | `HornVietDbContext.ApplyAuditConcepts` |
 
 ### 4.2 Sửa / hủy phiếu mới nhất
 
@@ -326,7 +326,7 @@ Ghi chú: `GetVariantCosts` liệt kê cả biến thể của sản phẩm đan
 
 ## 7. Dữ liệu
 
-Migration: `Website.Infrastructure/Persistence/Migrations/20261009084805_AddStockReceiptsAndCost.cs`. Cấu hình EF: `Website.Infrastructure/Persistence/WebsiteDbContext.cs`.
+Migration: `HornViet.Infrastructure/Persistence/Migrations/20261009084805_AddStockReceiptsAndCost.cs`. Cấu hình EF: `HornViet.Infrastructure/Persistence/HornVietDbContext.cs`.
 
 ### 7.1 Bảng `StockReceipts` (mới)
 
@@ -371,22 +371,22 @@ Cấu trúc tổng thể xem [Cơ sở dữ liệu](10-co-so-du-lieu.md).
 | Hai giao dịch cùng sửa tồn một biến thể (rowversion) | 409 | Dữ liệu (tồn kho) vừa được cập nhật bởi giao dịch khác. Vui lòng tải lại và thử lại. | Tải lại trang, thao tác lại. |
 | Lỗi phía form (chưa gửi API) | — | Chọn sản phẩm cần nhập / Số lượng nhập phải từ 1 đến 1.000.000 / Giá nhập không hợp lệ | Sửa trường được đánh dấu. |
 
-Định dạng response lỗi: xem [API.md — mục 1.1](../API.md). Lỗi nghiệp vụ được đổi sang HTTP trong `Website.Api/Middlewares` (`BusinessErrors.TryMap`): `UserFriendlyException` → 400, `EntityNotFoundException` → 404, `DbUpdateConcurrencyException` → 409.
+Định dạng response lỗi: xem [API.md — mục 1.1](../API.md). Lỗi nghiệp vụ được đổi sang HTTP trong `HornViet.Api/Middlewares` (`BusinessErrors.TryMap`): `UserFriendlyException` → 400, `EntityNotFoundException` → 404, `DbUpdateConcurrencyException` → 409.
 
 ## 9. Mã nguồn liên quan
 
 | Tầng | File |
 |---|---|
-| Domain — phiếu nhập | `Website.Domain/Inventory/Entities/StockReceipt.cs` |
-| Domain — giá vốn biến thể | `Website.Domain/Catalog/Entities/Catalog.cs` (`ProductVariant.AverageCost`, `MovingAverage`, `ReceiveStock`, `ReplaceLatestReceipt`) |
-| Domain — dòng đơn | `Website.Domain/Orders/Entities/Order.cs` (`OrderItem.UnitCost`, `Order.AddItem`) |
-| Application | `Website.Application/Inventory/StockReceiptAppService.cs` |
-| Application — ghi giá vốn khi bán | `Website.Application/Orders/OrderAppService.cs` (`CreateAsync`) |
-| API | `Website.Api/Controllers/Admin/StockReceiptController.cs` |
-| Phân quyền | `Website.Api/Authorization/Authentication.cs` (`AuthorizationPolicies.AdminOnly`) |
-| Ánh xạ lỗi | `Website.Api/Controllers/WebsiteBaseController.cs`, `Website.Api/Middlewares` (`BusinessErrors`) |
-| Hạ tầng | `Website.Infrastructure/Persistence/WebsiteDbContext.cs`, `Website.Infrastructure/Persistence/Migrations/20261009084805_AddStockReceiptsAndCost.cs` |
-| Unit test | `tests/Website.Domain.UnitTests/Inventory/StockReceiptTests.cs` |
+| Domain — phiếu nhập | `HornViet.Domain/Inventory/Entities/StockReceipt.cs` |
+| Domain — giá vốn biến thể | `HornViet.Domain/Catalog/Entities/Catalog.cs` (`ProductVariant.AverageCost`, `MovingAverage`, `ReceiveStock`, `ReplaceLatestReceipt`) |
+| Domain — dòng đơn | `HornViet.Domain/Orders/Entities/Order.cs` (`OrderItem.UnitCost`, `Order.AddItem`) |
+| Application | `HornViet.Application/Inventory/StockReceiptAppService.cs` |
+| Application — ghi giá vốn khi bán | `HornViet.Application/Orders/OrderAppService.cs` (`CreateAsync`) |
+| API | `HornViet.Api/Controllers/Admin/StockReceiptController.cs` |
+| Phân quyền | `HornViet.Api/Authorization/Authentication.cs` (`AuthorizationPolicies.AdminOnly`) |
+| Ánh xạ lỗi | `HornViet.Api/Controllers/HornVietBaseController.cs`, `HornViet.Api/Middlewares` (`BusinessErrors`) |
+| Hạ tầng | `HornViet.Infrastructure/Persistence/HornVietDbContext.cs`, `HornViet.Infrastructure/Persistence/Migrations/20261009084805_AddStockReceiptsAndCost.cs` |
+| Unit test | `tests/HornViet.Domain.UnitTests/Inventory/StockReceiptTests.cs` |
 | Frontend — trang | `HornViet_admin/app/(panel)/inventory/page.tsx` |
 | Frontend — dữ liệu ảo, `movingAverage` | `HornViet_admin/lib/hsv/mock-cost.ts` |
 | Frontend — gọi API | `HornViet_admin/lib/api/services.ts` (`stockReceiptApi`) |

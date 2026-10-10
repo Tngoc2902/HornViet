@@ -31,11 +31,11 @@ Tài liệu API chi tiết (tham số, kết quả từng endpoint): [`../API.md
 
 | Ứng dụng | Repo | Công nghệ | Cổng dev | Người dùng |
 |---|---|---|---|---|
-| Web API | `Website.Api` | .NET 10, ASP.NET Core, EF Core 10, SQL Server | `https://localhost:44311`, `http://localhost:21021` | Hai frontend gọi tới |
+| Web API | `HornViet` (project `HornViet.Api`) | .NET 10, ASP.NET Core, EF Core 10, SQL Server | `https://localhost:44311`, `http://localhost:21021` | Hai frontend gọi tới |
 | Trang cửa hàng | `HornViet_customer` | Next.js 15 (App Router), React 19, Tailwind CSS | `http://localhost:3000` | Khách vãng lai, Khách hàng |
 | Trang quản trị | `HornViet_admin` | Next.js 15 (App Router), React 19, Tailwind CSS | `http://localhost:3001` | Nhân viên, Quản trị viên |
 
-**Ngoài phạm vi** (theo code hiện tại): cổng thanh toán trực tuyến (phương thức "Chuyển khoản" chỉ được ghi nhận, xem `Website.Domain/Orders/Enums/PaymentMethod.cs`), tính phí vận chuyển, đa ngôn ngữ.
+**Ngoài phạm vi** (theo code hiện tại): cổng thanh toán trực tuyến (phương thức "Chuyển khoản" chỉ được ghi nhận, xem `HornViet.Domain/Orders/Enums/PaymentMethod.cs`), tính phí vận chuyển, đa ngôn ngữ.
 
 ## 2. Kiến trúc
 
@@ -45,7 +45,7 @@ Tài liệu API chi tiết (tham số, kết quả từng endpoint): [`../API.md
 flowchart LR
     U1["Trình duyệt - Khách hàng"] --> STORE["HornViet_customer<br/>Next.js, cổng 3000"]
     U2["Trình duyệt - Nhân viên / Quản trị viên"] --> ADMIN["HornViet_admin<br/>Next.js, cổng 3001"]
-    STORE -->|"fetch JSON + Bearer JWT"| API["Website.Api<br/>ASP.NET Core, cổng 44311 / 21021"]
+    STORE -->|"fetch JSON + Bearer JWT"| API["HornViet.Api<br/>ASP.NET Core, cổng 44311 / 21021"]
     ADMIN -->|"fetch JSON + Bearer JWT"| API
     U1 -.->|"thẻ img /uploads/..."| API
     U2 -.->|"thẻ img /uploads/..."| API
@@ -59,53 +59,53 @@ flowchart LR
 
 - Hai frontend là ứng dụng Next.js chạy phía trình duyệt gọi API trực tiếp bằng `fetch` (`lib/api/http.ts` ở cả hai repo). Vì khác origin nên backend phải bật CORS cho cả hai (`App:CorsOrigins`).
 - Token JWT lưu ở `localStorage` của từng origin, nên đăng nhập ở cửa hàng và ở trang quản trị là hai phiên độc lập.
-- Ảnh sản phẩm được backend phục vụ dạng file tĩnh (`app.UseStaticFiles()` trong `Website.Api/Program.cs`); frontend ghép `NEXT_PUBLIC_API_BASE_URL` + đường dẫn `/uploads/...`.
+- Ảnh sản phẩm được backend phục vụ dạng file tĩnh (`app.UseStaticFiles()` trong `HornViet.Api/Program.cs`); frontend ghép `NEXT_PUBLIC_API_BASE_URL` + đường dẫn `/uploads/...`.
 - Email "Quên mật khẩu" gửi qua SMTP; nếu chưa cấu hình `Smtp:Host` thì lưu thành file `.eml` (xem [Cấu hình & triển khai](11-cau-hinh-trien-khai.md)).
 
 ### 2.2 Kiến trúc DDD của backend
 
 | Project | Tầng | Vai trò | Thành phần chính |
 |---|---|---|---|
-| `SharedKernel` | Nhân dùng chung | Khối dựng không phụ thuộc framework | `Entity<TKey>`, `ValueObject`, `IHasCreationTime`, `ISoftDelete`, `UserFriendlyException`, `EntityNotFoundException` (namespace `Website.Domain.SharedKernel`) |
-| `Website.Domain` | Miền (Domain) | Entity và quy tắc nghiệp vụ | `Catalog`, `Carts`, `Orders`, `Inventory`, `Users`; interface `IRepository<TEntity,TKey>`, `IUnitOfWork`; `AppConsts` |
-| `Website.Application` | Ứng dụng | Application Service + DTO cho từng use case | `*AppService`, `DataSeeder`, `IAppSession`, `IEmailSender`, `AppUrlOptions`, `PagedInput` |
-| `Website.Infrastructure` | Hạ tầng | Cài đặt truy cập dữ liệu, gửi email | `WebsiteDbContext` (cũng là `IUnitOfWork`), `Repository<,>`, `Migrations/`, `SmtpEmailSender` |
-| `Website.Api` | Trình bày (Presentation) | HTTP, xác thực, bọc response | `Controllers/`, `Authorization/Authentication.cs`, `Middlewares/ResponseHandling.cs`, `Models/AjaxResponse.cs`, `Program.cs` |
-| `tests/Website.Domain.UnitTests` | Kiểm thử | Unit test cho tầng Domain (xUnit) | `Carts`, `Catalog`, `Inventory`, `Orders`, `Users`, `SharedKernel` |
+| `SharedKernel` | Nhân dùng chung | Khối dựng không phụ thuộc framework | `Entity<TKey>`, `ValueObject`, `IHasCreationTime`, `ISoftDelete`, `UserFriendlyException`, `EntityNotFoundException` (namespace `HornViet.Domain.SharedKernel`) |
+| `HornViet.Domain` | Miền (Domain) | Entity và quy tắc nghiệp vụ | `Catalog`, `Carts`, `Orders`, `Inventory`, `Users`; interface `IRepository<TEntity,TKey>`, `IUnitOfWork`; `AppConsts` |
+| `HornViet.Application` | Ứng dụng | Application Service + DTO cho từng use case | `*AppService`, `DataSeeder`, `IAppSession`, `IEmailSender`, `AppUrlOptions`, `PagedInput` |
+| `HornViet.Infrastructure` | Hạ tầng | Cài đặt truy cập dữ liệu, gửi email | `HornVietDbContext` (cũng là `IUnitOfWork`), `Repository<,>`, `Migrations/`, `SmtpEmailSender` |
+| `HornViet.Api` | Trình bày (Presentation) | HTTP, xác thực, bọc response | `Controllers/`, `Authorization/Authentication.cs`, `Middlewares/ResponseHandling.cs`, `Models/AjaxResponse.cs`, `Program.cs` |
+| `tests/HornViet.Domain.UnitTests` | Kiểm thử | Unit test cho tầng Domain (xUnit) | `Carts`, `Catalog`, `Inventory`, `Orders`, `Users`, `SharedKernel` |
 
 **Quy tắc phụ thuộc** (theo `ProjectReference` trong các file `.csproj`):
 
 ```mermaid
 flowchart TD
-    API["Website.Api"] --> APP["Website.Application"]
-    API --> INF["Website.Infrastructure"]
+    API["HornViet.Api"] --> APP["HornViet.Application"]
+    API --> INF["HornViet.Infrastructure"]
     INF --> APP
-    INF --> DOM["Website.Domain"]
+    INF --> DOM["HornViet.Domain"]
     APP --> DOM
     DOM --> SK["SharedKernel"]
-    TEST["tests/Website.Domain.UnitTests"] --> DOM
+    TEST["tests/HornViet.Domain.UnitTests"] --> DOM
 ```
 
-- `Website.Domain` chỉ phụ thuộc `SharedKernel`, không biết EF Core hay HTTP. Interface repository nằm ở Domain, lớp cài đặt nằm ở Infrastructure (đảo ngược phụ thuộc).
-- `Website.Infrastructure` tham chiếu `Website.Application` để cài đặt các interface khai báo ở đó (`IEmailSender`, `AppUrlOptions`…).
-- `Website.Application` có tham chiếu gói `Microsoft.EntityFrameworkCore` để dùng `Include`, `ToListAsync`… trên `IQueryable` trả về từ repository.
-- Quy tắc nghiệp vụ cốt lõi nằm trong entity, ví dụ `ProductVariant.DecreaseStock / IncreaseStock / SetStock / ReceiveStock` (`Website.Domain/Catalog/Entities/Catalog.cs`), `Order.ChangeStatus` (`Website.Domain/Orders/Entities/Order.cs`).
+- `HornViet.Domain` chỉ phụ thuộc `SharedKernel`, không biết EF Core hay HTTP. Interface repository nằm ở Domain, lớp cài đặt nằm ở Infrastructure (đảo ngược phụ thuộc).
+- `HornViet.Infrastructure` tham chiếu `HornViet.Application` để cài đặt các interface khai báo ở đó (`IEmailSender`, `AppUrlOptions`…).
+- `HornViet.Application` có tham chiếu gói `Microsoft.EntityFrameworkCore` để dùng `Include`, `ToListAsync`… trên `IQueryable` trả về từ repository.
+- Quy tắc nghiệp vụ cốt lõi nằm trong entity, ví dụ `ProductVariant.DecreaseStock / IncreaseStock / SetStock / ReceiveStock` (`HornViet.Domain/Catalog/Entities/Catalog.cs`), `Order.ChangeStatus` (`HornViet.Domain/Orders/Entities/Order.cs`).
 
 ### 2.3 Đăng ký dịch vụ & pipeline (Program.cs)
 
-Thứ tự trong `Website.Api/Program.cs`:
+Thứ tự trong `HornViet.Api/Program.cs`:
 
-1. `AddInfrastructure(config)` — `WebsiteDbContext` (SQL Server, `EnableRetryOnFailure`, `SplitQuery`), `IUnitOfWork`, `IRepository<,>`, `IEmailSender` (`Website.Infrastructure/DependencyInjectionRegister.cs`).
-2. `AddApplication()` — các Application Service (Scoped), `PasswordHasher<User>`, `DataSeeder` (`Website.Application/ApplicationModule.cs`).
+1. `AddInfrastructure(config)` — `HornVietDbContext` (SQL Server, `EnableRetryOnFailure`, `SplitQuery`), `IUnitOfWork`, `IRepository<,>`, `IEmailSender` (`HornViet.Infrastructure/DependencyInjectionRegister.cs`).
+2. `AddApplication()` — các Application Service (Scoped), `PasswordHasher<User>`, `DataSeeder` (`HornViet.Application/ApplicationModule.cs`).
 3. `Configure<AppUrlOptions>(App)` — địa chỉ hai frontend cho link trong email.
-4. `AddJwtAuthentication(config)` — JWT Bearer, `IAppSession`, chính sách `Management` và `AdminOnly` (`Website.Api/Authorization/Authentication.cs`).
+4. `AddJwtAuthentication(config)` — JWT Bearer, `IAppSession`, chính sách `Management` và `AdminOnly` (`HornViet.Api/Authorization/Authentication.cs`).
 5. `AddControllers` với `WrapResultFilter` và `ValidationResponse.Create`; CORS theo `App:CorsOrigins`; Swagger.
 6. Nếu `Database:MigrateOnStartup = true`: áp migration rồi chạy `DataSeeder.SeedAsync`.
 7. Pipeline: `ExceptionHandlingMiddleware` → Swagger (chỉ Development) → `UseStaticFiles` → `UseCors` → `UseAuthentication` → `UseAuthorization` → `MapControllers`.
 
 ## 3. Module nghiệp vụ
 
-| Module | Controller (`Website.Api/Controllers/`) | Application Service | Entity (Domain) | Tài liệu |
+| Module | Controller (`HornViet.Api/Controllers/`) | Application Service | Entity (Domain) | Tài liệu |
 |---|---|---|---|---|
 | Xác thực & tài khoản | `Account/TokenAuthController.cs`, `Account/AccountController.cs`, `Account/ProfileController.cs` | `Accounts/AccountAppService.cs`, `Profiles/ProfileAppService.cs` | `User`, `UserAddress`, `PasswordResetToken` | [01](01-xac-thuc-tai-khoan.md) |
 | Phân quyền & người dùng | `Admin/UserController.cs` | `Users/UserAppService.cs` | `User`, `Role`, `UserRole` | [02](02-phan-quyen-nguoi-dung.md) |
@@ -116,7 +116,7 @@ Thứ tự trong `Website.Api/Program.cs`:
 | Nhập kho & giá vốn | `Admin/StockReceiptController.cs` | `Inventory/StockReceiptAppService.cs` | `StockReceipt`, `ProductVariant.AverageCost` | [07](07-nhap-kho-gia-von.md) |
 | Thống kê & báo cáo | `Admin/StatisticController.cs` | `Statistics/StatisticAppService.cs` | (đọc `Order`, `OrderItem`) | [08](08-thong-ke-bao-cao.md) |
 
-Đường dẫn Application Service tính từ `Website.Application/`.
+Đường dẫn Application Service tính từ `HornViet.Application/`.
 
 ## 4. Vai trò & quyền
 
@@ -129,7 +129,7 @@ Thứ tự trong `Website.Api/Program.cs`:
 | Nhân viên | `Staff` | Trang quản trị (`POST /api/TokenAuth/AuthenticateAdmin`) | Quản trị viên tạo (`User/Create`) hoặc seed `staff` |
 | Quản trị viên | `Admin` | Trang quản trị | Seed `admin`, hoặc Quản trị viên khác gán vai trò |
 
-Vai trò được định nghĩa trong `Website.Domain/Users/Enums/RoleName.cs` và lưu ở bảng `AbpRoles`. Hai chính sách phân quyền (`Website.Api/Authorization/Authentication.cs`):
+Vai trò được định nghĩa trong `HornViet.Domain/Users/Enums/RoleName.cs` và lưu ở bảng `AbpRoles`. Hai chính sách phân quyền (`HornViet.Api/Authorization/Authentication.cs`):
 
 - `Management` = có vai trò `Admin` **hoặc** `Staff`.
 - `AdminOnly` = có vai trò `Admin`.
@@ -167,17 +167,17 @@ Chi tiết: [Phân quyền & quản lý người dùng](02-phan-quyen-nguoi-dung
 
 | Mục | Quy ước | Nguồn |
 |---|---|---|
-| Route | `/api/services/app/{Service}/{Action}` (giống ABP), VD `/api/services/app/Product/GetAll` | `[Route("api/services/app/[controller]/[action]")]` trong `Website.Api/Controllers/WebsiteBaseController.cs` |
+| Route | `/api/services/app/{Service}/{Action}` (giống ABP), VD `/api/services/app/Product/GetAll` | `[Route("api/services/app/[controller]/[action]")]` trong `HornViet.Api/Controllers/HornVietBaseController.cs` |
 | Ngoại lệ | Đăng nhập: `/api/TokenAuth/Authenticate`, `/api/TokenAuth/AuthenticateAdmin` | `[Route("api/[controller]/[action]")]` trong `TokenAuthController.cs` |
 | GET / DELETE | Tham số qua query string (`?id=1`, mảng lặp tên `categoryIds=1&categoryIds=2`) | `[FromQuery]` |
 | POST / PUT | Body JSON, camelCase | `[FromBody]` |
 | Xác thực | Header `Authorization: Bearer <accessToken>`, hạn 24 giờ (`Jwt:ExpirationHours`) | `Authentication.cs` |
 | Enum | Gửi/nhận dạng số | Xem bảng enum trong [`../API.md`](../API.md) |
-| Ngày giờ | Lưu giờ địa phương, JSON có offset (VD `+07:00`) | Bộ chuyển đổi `DateTimeKind.Local` trong `WebsiteDbContext.OnModelCreating` |
+| Ngày giờ | Lưu giờ địa phương, JSON có offset (VD `+07:00`) | Bộ chuyển đổi `DateTimeKind.Local` trong `HornVietDbContext.OnModelCreating` |
 
 ### 5.2 Vỏ response (AjaxResponse)
 
-Mọi response (thành công hay lỗi) có cùng dạng, định nghĩa ở `Website.Api/Models/AjaxResponse.cs`:
+Mọi response (thành công hay lỗi) có cùng dạng, định nghĩa ở `HornViet.Api/Models/AjaxResponse.cs`:
 
 ```json
 { "result": { }, "targetUrl": null, "success": true, "error": null, "unauthorizedRequest": false, "__abp": true }
@@ -195,14 +195,14 @@ Mọi response (thành công hay lỗi) có cùng dạng, định nghĩa ở `We
 }
 ```
 
-- Kết quả thành công được bọc tự động bởi `WrapResultFilter` (`Website.Api/Middlewares/ResponseHandling.cs`); action không trả dữ liệu (`Ok()`) cho `result: null`.
+- Kết quả thành công được bọc tự động bởi `WrapResultFilter` (`HornViet.Api/Middlewares/ResponseHandling.cs`); action không trả dữ liệu (`Ok()`) cho `result: null`.
 - `error.code` hiện luôn là `0`; frontend phân biệt lỗi qua mã HTTP.
 
 ### 5.3 Phân trang
 
 | Thành phần | Mô tả | Nguồn |
 |---|---|---|
-| Input `skipCount` | Số bản ghi bỏ qua, ≥ 0, mặc định 0 | `PagedInput` trong `Website.Application/Common/CommonDtos.cs` |
+| Input `skipCount` | Số bản ghi bỏ qua, ≥ 0, mặc định 0 | `PagedInput` trong `HornViet.Application/Common/CommonDtos.cs` |
 | Input `maxResultCount` | Số bản ghi mỗi trang, 1–100, mặc định 12 | `AppConsts.DefaultPageSize`, `AppConsts.MaxPageSize` |
 | Output | `{ totalCount, items }` | `PagedResultDto<T>` |
 | Danh sách không phân trang | `{ items }` | `ListResultDto<T>` |
@@ -211,7 +211,7 @@ Vượt giới hạn `maxResultCount` (VD 500) → lỗi validation 400.
 
 ### 5.4 Xử lý lỗi
 
-Lỗi nghiệp vụ được ném dưới dạng exception ở tầng Domain/Application và đổi thành mã HTTP tại một nơi duy nhất: `BusinessErrors.TryMap` (`Website.Api/Middlewares/ResponseHandling.cs`).
+Lỗi nghiệp vụ được ném dưới dạng exception ở tầng Domain/Application và đổi thành mã HTTP tại một nơi duy nhất: `BusinessErrors.TryMap` (`HornViet.Api/Middlewares/ResponseHandling.cs`).
 
 | Nguồn lỗi | HTTP | `error.message` | Nơi xử lý |
 |---|---|---|---|
@@ -223,7 +223,7 @@ Lỗi nghiệp vụ được ném dưới dạng exception ở tầng Domain/App
 | Không đủ quyền | 403 | "Bạn không có quyền thực hiện chức năng này." | `JwtBearerEvents.OnForbidden` |
 | Lỗi khác (bug, mất kết nối CSDL) | 500 | "Đã có lỗi xảy ra trong quá trình xử lý." (chi tiết chỉ ghi log) | `ExceptionHandlingMiddleware` |
 
-**Vì sao có `WebsiteBaseController.Run(...)`?** Mọi action viết dạng `=> Run(() => _service.XxxAsync(input))`. `Run` bắt lỗi nghiệp vụ ngay trong controller và trả `ObjectResult` với mã 400/404/409. Nhờ vậy khi debug bằng Visual Studio (F5, Just My Code), chương trình không dừng ở "Exception User-Unhandled" mỗi lần người dùng nhập sai. `ExceptionHandlingMiddleware` vẫn là lưới an toàn cho lỗi ném ngoài controller.
+**Vì sao có `HornVietBaseController.Run(...)`?** Mọi action viết dạng `=> Run(() => _service.XxxAsync(input))`. `Run` bắt lỗi nghiệp vụ ngay trong controller và trả `ObjectResult` với mã 400/404/409. Nhờ vậy khi debug bằng Visual Studio (F5, Just My Code), chương trình không dừng ở "Exception User-Unhandled" mỗi lần người dùng nhập sai. `ExceptionHandlingMiddleware` vẫn là lưới an toàn cho lỗi ném ngoài controller.
 
 ## 6. Luồng một request điển hình
 
@@ -237,7 +237,7 @@ sequenceDiagram
     participant C as OrderController
     participant S as OrderAppService
     participant R as IRepository / IUnitOfWork
-    participant DB as WebsiteDbContext + SQL Server
+    participant DB as HornVietDbContext + SQL Server
 
     FE->>MW: POST /api/services/app/Order/Create (Bearer JWT, body JSON)
     MW->>MW: CORS, xác thực JWT, OnTokenValidated so SecurityStamp
@@ -261,14 +261,14 @@ Mô tả từng bước:
 | Bước | Việc xảy ra | File / hàm |
 |---|---|---|
 | 1 | Frontend gửi request kèm header `Authorization`. | `HornViet_customer/lib/api/http.ts` |
-| 2 | CORS kiểm tra origin; JwtBearer kiểm tra chữ ký, hạn, issuer/audience; `OnTokenValidated` truy vấn `AbpUsers` để chắc tài khoản còn `IsActive` và `SecurityStamp` khớp claim `sstamp`. | `Website.Api/Authorization/Authentication.cs` |
-| 3 | `[ApiController]` kiểm tra DataAnnotations của `CreateOrderInput`; sai → 400 qua `ValidationResponse.Create`. | `Website.Application/Orders/OrderAppService.cs` (class `CreateOrderInput`) |
-| 4 | Controller gọi service qua `Run(...)`. | `Website.Api/Controllers/Shopping/OrderController.cs` |
-| 5–7 | Service đọc giỏ qua repository; `GetAll()` trả `IQueryable` đã áp bộ lọc xóa mềm. | `Website.Infrastructure/Persistence/Repositories/Repository.cs` |
-| 8 | Quy tắc nghiệp vụ trong entity: `ProductVariant.DecreaseStock`, `Order.AddItem` (lưu tên, đơn giá, giá vốn lúc mua). | `Website.Domain/Catalog/Entities/Catalog.cs`, `Website.Domain/Orders/Entities/Order.cs` |
-| 9–10 | Ghi nhận thay đổi trong Change Tracker, rồi một lần `SaveChangesAsync` = một giao dịch. Trước khi ghi, `ApplyAuditConcepts` gán `CreationTime` và đổi xóa thành xóa mềm. | `Website.Infrastructure/Persistence/WebsiteDbContext.cs` |
+| 2 | CORS kiểm tra origin; JwtBearer kiểm tra chữ ký, hạn, issuer/audience; `OnTokenValidated` truy vấn `AbpUsers` để chắc tài khoản còn `IsActive` và `SecurityStamp` khớp claim `sstamp`. | `HornViet.Api/Authorization/Authentication.cs` |
+| 3 | `[ApiController]` kiểm tra DataAnnotations của `CreateOrderInput`; sai → 400 qua `ValidationResponse.Create`. | `HornViet.Application/Orders/OrderAppService.cs` (class `CreateOrderInput`) |
+| 4 | Controller gọi service qua `Run(...)`. | `HornViet.Api/Controllers/Shopping/OrderController.cs` |
+| 5–7 | Service đọc giỏ qua repository; `GetAll()` trả `IQueryable` đã áp bộ lọc xóa mềm. | `HornViet.Infrastructure/Persistence/Repositories/Repository.cs` |
+| 8 | Quy tắc nghiệp vụ trong entity: `ProductVariant.DecreaseStock`, `Order.AddItem` (lưu tên, đơn giá, giá vốn lúc mua). | `HornViet.Domain/Catalog/Entities/Catalog.cs`, `HornViet.Domain/Orders/Entities/Order.cs` |
+| 9–10 | Ghi nhận thay đổi trong Change Tracker, rồi một lần `SaveChangesAsync` = một giao dịch. Trước khi ghi, `ApplyAuditConcepts` gán `CreationTime` và đổi xóa thành xóa mềm. | `HornViet.Infrastructure/Persistence/HornVietDbContext.cs` |
 | 11–12 | SQL Server so `RowVersion` của biến thể; nếu đơn khác vừa đổi tồn kho → `DbUpdateConcurrencyException` → 409. | `BusinessErrors.TryMap` |
-| 13–15 | Kết quả được `WrapResultFilter` bọc thành `AjaxResponse`. | `Website.Api/Middlewares/ResponseHandling.cs` |
+| 13–15 | Kết quả được `WrapResultFilter` bọc thành `AjaxResponse`. | `HornViet.Api/Middlewares/ResponseHandling.cs` |
 
 Chi tiết nghiệp vụ đặt hàng: [Đặt hàng & đơn hàng](06-dat-hang-don-hang.md).
 
@@ -285,13 +285,13 @@ Chi tiết nghiệp vụ đặt hàng: [Đặt hàng & đơn hàng](06-dat-hang-
 ### 7.2 Các bước
 
 1. **Database** — có hai cách:
-   - Để backend tự tạo: ở môi trường Development, `Database:MigrateOnStartup = true` (`Website.Api/appsettings.Development.json`) nên lần chạy đầu tự tạo database, áp migration và seed.
+   - Để backend tự tạo: ở môi trường Development, `Database:MigrateOnStartup = true` (`HornViet.Api/appsettings.Development.json`) nên lần chạy đầu tự tạo database, áp migration và seed.
    - Hoặc chạy 3 script trong `database/` (xem [Cơ sở dữ liệu](10-co-so-du-lieu.md)).
-2. **Backend** (thư mục `Website.Api`):
+2. **Backend** (thư mục gốc repo `HornViet`):
 
    ```bash
    dotnet tool restore
-   dotnet run --project Website.Api --launch-profile https
+   dotnet run --project HornViet.Api --launch-profile https
    ```
 
    Swagger: `https://localhost:44311/swagger`. Lần đầu dùng HTTPS có thể cần `dotnet dev-certs https --trust`.
@@ -310,7 +310,7 @@ Trên PowerShell, thay `cp` bằng `Copy-Item .env.example .env.local`. Mặc đ
 
 ## 8. Tài khoản demo
 
-Do `Website.Application/DataSeeder.cs` hoặc `database/03_seed.sql` tạo:
+Do `HornViet.Application/DataSeeder.cs` hoặc `database/03_seed.sql` tạo:
 
 | Tài khoản | Mật khẩu | Vai trò | Đăng nhập tại |
 |---|---|---|---|
@@ -325,18 +325,18 @@ Do `Website.Application/DataSeeder.cs` hoặc `database/03_seed.sql` tạo:
 
 | Nội dung | Đường dẫn |
 |---|---|
-| Khởi động, DI, pipeline | `Website.Api/Program.cs` |
-| Controller gốc, `Run(...)` | `Website.Api/Controllers/WebsiteBaseController.cs` |
-| Bọc response, ánh xạ lỗi, lỗi validation | `Website.Api/Middlewares/ResponseHandling.cs` |
-| Vỏ response | `Website.Api/Models/AjaxResponse.cs` |
-| JWT, chính sách phân quyền, `IAppSession` | `Website.Api/Authorization/Authentication.cs` |
-| Đăng ký Application Service | `Website.Application/ApplicationModule.cs` |
-| Phân trang, DTO chung | `Website.Application/Common/CommonDtos.cs` |
-| Hằng số nghiệp vụ | `Website.Domain/AppConsts.cs` |
+| Khởi động, DI, pipeline | `HornViet.Api/Program.cs` |
+| Controller gốc, `Run(...)` | `HornViet.Api/Controllers/HornVietBaseController.cs` |
+| Bọc response, ánh xạ lỗi, lỗi validation | `HornViet.Api/Middlewares/ResponseHandling.cs` |
+| Vỏ response | `HornViet.Api/Models/AjaxResponse.cs` |
+| JWT, chính sách phân quyền, `IAppSession` | `HornViet.Api/Authorization/Authentication.cs` |
+| Đăng ký Application Service | `HornViet.Application/ApplicationModule.cs` |
+| Phân trang, DTO chung | `HornViet.Application/Common/CommonDtos.cs` |
+| Hằng số nghiệp vụ | `HornViet.Domain/AppConsts.cs` |
 | Exception nghiệp vụ, entity cơ sở | `SharedKernel/Exceptions.cs`, `SharedKernel/Entity.cs` |
-| Repository, Unit of Work | `Website.Domain/Interfaces/Repositories/IRepository.cs`, `Website.Infrastructure/Persistence/Repositories/Repository.cs` |
-| DbContext | `Website.Infrastructure/Persistence/WebsiteDbContext.cs` |
-| Đăng ký hạ tầng | `Website.Infrastructure/DependencyInjectionRegister.cs` |
+| Repository, Unit of Work | `HornViet.Domain/Interfaces/Repositories/IRepository.cs`, `HornViet.Infrastructure/Persistence/Repositories/Repository.cs` |
+| DbContext | `HornViet.Infrastructure/Persistence/HornVietDbContext.cs` |
+| Đăng ký hạ tầng | `HornViet.Infrastructure/DependencyInjectionRegister.cs` |
 | HTTP client frontend | `HornViet_customer/lib/api/http.ts`, `HornViet_admin/lib/api/http.ts` |
 | Gọi API theo service | `HornViet_customer/lib/api/services.ts`, `HornViet_admin/lib/api/services.ts` |
 | Tài liệu API | [`../API.md`](../API.md) |

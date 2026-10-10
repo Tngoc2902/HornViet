@@ -6,7 +6,7 @@ Database `HonSungVietDb` trên SQL Server 2019+, gồm 15 bảng nghiệp vụ �
 
 - Giúp người mới hiểu dữ liệu được lưu ở đâu, quan hệ ra sao, vì sao thiết kế như vậy.
 - Hướng dẫn thêm migration, sinh lại script SQL, khởi tạo dữ liệu mẫu, sao lưu/khôi phục.
-- Nguồn sự thật là model EF Core: `Website.Infrastructure/Persistence/WebsiteDbContext.cs` + entity trong `Website.Domain`. Script `database/02_schema.sql` được **sinh ra** từ migration, không sửa tay.
+- Nguồn sự thật là model EF Core: `HornViet.Infrastructure/Persistence/HornVietDbContext.cs` + entity trong `HornViet.Domain`. Script `database/02_schema.sql` được **sinh ra** từ migration, không sửa tay.
 
 ## 2. Vai trò & quyền
 
@@ -193,7 +193,7 @@ Ngoài 15 bảng trên còn bảng hệ thống `__EFMigrationsHistory` (EF Core
 | `PasswordResetTokens` | `Users/Entities/PasswordResetToken.cs` | Mã đặt lại mật khẩu (Quên mật khẩu) | Chỉ lưu SHA-256 của mã; hiệu lực 30 phút; `UsedTime` ≠ null = đã dùng/thu hồi |
 | `StockReceipts` | `Inventory/Entities/StockReceipt.cs` | Phiếu nhập kho: số lượng, giá nhập, người lập | `StockBefore`, `AverageCostBefore` lưu trạng thái trước phiếu để sửa/hủy phiếu mới nhất |
 
-Đường dẫn entity tính từ `Website.Domain/`. Tên `AbpUsers`, `AbpRoles`, `AbpUserRoles` giữ theo quy ước ABP như thiết kế CSDL (mục 3.6 của báo cáo).
+Đường dẫn entity tính từ `HornViet.Domain/`. Tên `AbpUsers`, `AbpRoles`, `AbpUserRoles` giữ theo quy ước ABP như thiết kế CSDL (mục 3.6 của báo cáo).
 
 ### 3.3 Hành vi xóa của khóa ngoại
 
@@ -209,7 +209,7 @@ Trên thực tế ứng dụng hầu như không xóa cứng: các bảng chính
 
 ### 3.4 Collation `Latin1_General_100_CI_AI`
 
-- Khai báo ở cả `b.UseCollation("Latin1_General_100_CI_AI")` (`WebsiteDbContext.OnModelCreating`) và `CREATE DATABASE ... COLLATE Latin1_General_100_CI_AI` (`database/01_create_database.sql`).
+- Khai báo ở cả `b.UseCollation("Latin1_General_100_CI_AI")` (`HornVietDbContext.OnModelCreating`) và `CREATE DATABASE ... COLLATE Latin1_General_100_CI_AI` (`database/01_create_database.sql`).
 - `CI` = không phân biệt hoa thường, `AI` = không phân biệt dấu. Khách gõ "luoc sung" vẫn tìm ra "Lược sừng", "do trang tri" ra "Đồ trang trí". Các truy vấn tìm kiếm chỉ dùng `Contains` (VD `ProductAppService.GetAllAsync`), phần bỏ dấu do collation đảm nhận.
 - Không dùng `Vietnamese_CI_AI` vì collation này coi `ư`, `ơ`, `đ` là chữ cái riêng, nên "duong" không khớp "đường".
 - Hệ quả: chỉ mục duy nhất cũng không phân biệt dấu/hoa thường — "Lược sừng" và "luoc sung" bị coi là trùng tên danh mục.
@@ -218,30 +218,30 @@ Trên thực tế ứng dụng hầu như không xóa cứng: các bảng chính
 
 | Thành phần | Cơ chế | File |
 |---|---|---|
-| Đánh dấu | Entity cài `ISoftDelete` (cột `IsDeleted`): `Category`, `Material`, `Product`, `ProductVariant`, `User`, `Role` | `SharedKernel/Entity.cs`, entity trong `Website.Domain` |
-| Xóa | `Repository.Delete` gán `IsDeleted = true` trực tiếp (tránh EF xóa dây chuyền thực thể con); `ApplyAuditConcepts` cũng đổi `EntityState.Deleted` thành `Modified` + `IsDeleted = true` | `Website.Infrastructure/Persistence/Repositories/Repository.cs`, `WebsiteDbContext.ApplyAuditConcepts` |
-| Lọc | Vòng lặp trong `OnModelCreating` đăng ký `HasQueryFilter(x => !x.IsDeleted)` cho mọi entity cài `ISoftDelete` | `WebsiteDbContext.OnModelCreating` |
-| Bỏ lọc khi cần | `IgnoreQueryFilters()` để đọc lịch sử: tên tài khoản của đơn (`OrderAppService.GetAsync`), biến thể đã xóa trong thống kê (`StatisticAppService`), người lập phiếu (`StockReceiptAppService`) | `Website.Application/...` |
+| Đánh dấu | Entity cài `ISoftDelete` (cột `IsDeleted`): `Category`, `Material`, `Product`, `ProductVariant`, `User`, `Role` | `SharedKernel/Entity.cs`, entity trong `HornViet.Domain` |
+| Xóa | `Repository.Delete` gán `IsDeleted = true` trực tiếp (tránh EF xóa dây chuyền thực thể con); `ApplyAuditConcepts` cũng đổi `EntityState.Deleted` thành `Modified` + `IsDeleted = true` | `HornViet.Infrastructure/Persistence/Repositories/Repository.cs`, `HornVietDbContext.ApplyAuditConcepts` |
+| Lọc | Vòng lặp trong `OnModelCreating` đăng ký `HasQueryFilter(x => !x.IsDeleted)` cho mọi entity cài `ISoftDelete` | `HornVietDbContext.OnModelCreating` |
+| Bỏ lọc khi cần | `IgnoreQueryFilters()` để đọc lịch sử: tên tài khoản của đơn (`OrderAppService.GetAsync`), biến thể đã xóa trong thống kê (`StatisticAppService`), người lập phiếu (`StockReceiptAppService`) | `HornViet.Application/...` |
 | Chỉ mục duy nhất | Có điều kiện `WHERE [IsDeleted] = 0` → tạo lại được danh mục/tài khoản trùng tên với bản ghi đã xóa | `HasFilter("[IsDeleted] = 0")` |
 
-Lưu ý: dòng giỏ / vai trò trỏ tới bản ghi đã xóa mềm cũng bị lọc cùng; cảnh báo EF tương ứng (`PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning`) được tắt có chủ đích trong `Website.Infrastructure/DependencyInjectionRegister.cs`.
+Lưu ý: dòng giỏ / vai trò trỏ tới bản ghi đã xóa mềm cũng bị lọc cùng; cảnh báo EF tương ứng (`PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning`) được tắt có chủ đích trong `HornViet.Infrastructure/DependencyInjectionRegister.cs`.
 
 ### 3.6 `RowVersion` — khóa lạc quan chống bán vượt tồn kho
 
 - Cột `ProductVariants.RowVersion` kiểu `rowversion`, khai báo `IsRowVersion()`; SQL Server tự tăng giá trị mỗi khi dòng bị cập nhật.
 - Khi EF cập nhật biến thể (trừ kho lúc đặt hàng, hoàn kho lúc hủy, nhập kho, sửa tồn kho), câu `UPDATE` có thêm điều kiện `WHERE RowVersion = <giá trị đã đọc>`. Nếu giao dịch khác vừa sửa dòng đó, không dòng nào được cập nhật → EF ném `DbUpdateConcurrencyException`.
-- `BusinessErrors.TryMap` (`Website.Api/Middlewares/ResponseHandling.cs`) đổi lỗi này thành **HTTP 409** với thông báo "Dữ liệu (tồn kho) vừa được cập nhật bởi giao dịch khác. Vui lòng tải lại và thử lại.".
+- `BusinessErrors.TryMap` (`HornViet.Api/Middlewares/ResponseHandling.cs`) đổi lỗi này thành **HTTP 409** với thông báo "Dữ liệu (tồn kho) vừa được cập nhật bởi giao dịch khác. Vui lòng tải lại và thử lại.".
 - Vì mỗi use case chỉ gọi một lần `SaveChangesAsync`, toàn bộ thay đổi (tạo đơn + trừ kho + xóa giỏ) được hoàn tác cùng nhau.
 
 ### 3.7 Các quy ước khác
 
 | Quy ước | Chi tiết | File |
 |---|---|---|
-| `CreationTime` tự động | Entity cài `IHasCreationTime` được gán `DateTime.Now` khi thêm mới (nếu chưa có) | `WebsiteDbContext.ApplyAuditConcepts` |
-| Giờ địa phương | Mọi cột `DateTime` lưu giờ địa phương của máy chủ (`DateTime.Now`); khi đọc ra được đánh dấu `DateTimeKind.Local` để JSON có offset (VD `+07:00`) | `WebsiteDbContext.OnModelCreating` (ValueConverter) |
+| `CreationTime` tự động | Entity cài `IHasCreationTime` được gán `DateTime.Now` khi thêm mới (nếu chưa có) | `HornVietDbContext.ApplyAuditConcepts` |
+| Giờ địa phương | Mọi cột `DateTime` lưu giờ địa phương của máy chủ (`DateTime.Now`); khi đọc ra được đánh dấu `DateTimeKind.Local` để JSON có offset (VD `+07:00`) | `HornVietDbContext.OnModelCreating` (ValueConverter) |
 | Tiền | `decimal(18,2)` cho giá bán, tổng tiền, giá nhập; `decimal(18,4)` cho giá vốn bình quân và giá vốn dòng đơn (tránh lệch khi chia bình quân) | `HasPrecision` |
-| SĐT | `varchar(20)` (không Unicode) ở `Orders`, `UserAddresses`; định dạng kiểm tra bằng `AppConsts.PhoneRegex` | `Website.Domain/AppConsts.cs` |
-| `SecurityStamp` | `varchar(32)`, mặc định CSDL `REPLACE(CONVERT(char(36), NEWID()), '-', '')` để bản ghi cũ / chèn bằng SQL cũng có giá trị | `WebsiteDbContext` (cấu hình `User`) |
+| SĐT | `varchar(20)` (không Unicode) ở `Orders`, `UserAddresses`; định dạng kiểm tra bằng `AppConsts.PhoneRegex` | `HornViet.Domain/AppConsts.cs` |
+| `SecurityStamp` | `varchar(32)`, mặc định CSDL `REPLACE(CONVERT(char(36), NEWID()), '-', '')` để bản ghi cũ / chèn bằng SQL cũng có giá trị | `HornVietDbContext` (cấu hình `User`) |
 | Truy vấn tách | `UseQuerySplittingBehavior(SplitQuery)` khi `Include` nhiều collection (biến thể + ảnh) | `DependencyInjectionRegister.AddPersistence` |
 | Thử lại kết nối | `EnableRetryOnFailure()` | `DependencyInjectionRegister.AddPersistence` |
 
@@ -268,7 +268,7 @@ Ngoài ra EF tự tạo chỉ mục cho mọi cột khóa ngoại (VD `IX_Produc
 
 ### 4.2 Migration
 
-Migration hiện có (`Website.Infrastructure/Persistence/Migrations/`):
+Migration hiện có (`HornViet.Infrastructure/Persistence/Migrations/`):
 
 | Migration | Nội dung |
 |---|---|
@@ -281,7 +281,7 @@ Quy trình khi đổi model:
 
 ```mermaid
 flowchart TD
-    A["Sửa entity trong Website.Domain<br/>hoặc cấu hình trong WebsiteDbContext"] --> B["dotnet ef migrations add TenMigration"]
+    A["Sửa entity trong HornViet.Domain<br/>hoặc cấu hình trong HornVietDbContext"] --> B["dotnet ef migrations add TenMigration"]
     B --> C["Xem lại file migration sinh ra<br/>Up và Down"]
     C --> D["Sinh lại database/02_schema.sql<br/>migrations script --idempotent"]
     D --> E{"Áp vào database nào?"}
@@ -295,15 +295,15 @@ Các lệnh (chạy ở thư mục gốc repo backend):
 
 ```powershell
 dotnet tool restore
-dotnet ef migrations add <TenMigration> -p Website.Infrastructure -s Website.Api -o Persistence/Migrations
-dotnet ef migrations script --idempotent -p Website.Infrastructure -s Website.Api -o database/02_schema.sql
-dotnet ef database update -p Website.Infrastructure -s Website.Api
+dotnet ef migrations add <TenMigration> -p HornViet.Infrastructure -s HornViet.Api -o Persistence/Migrations
+dotnet ef migrations script --idempotent -p HornViet.Infrastructure -s HornViet.Api -o database/02_schema.sql
+dotnet ef database update -p HornViet.Infrastructure -s HornViet.Api
 ```
 
 - `dotnet-ef` phiên bản `10.0.9` được ghim trong `dotnet-tools.json`, nên chạy `dotnet tool restore` trước.
-- `-s Website.Api` (startup project): công cụ đọc cấu hình của `Website.Api` (chuỗi kết nối, `Jwt:SecurityKey` ở `appsettings.Development.json`). Thiếu `Jwt:SecurityKey` hợp lệ thì ứng dụng không dựng được, lệnh `dotnet ef` cũng lỗi.
+- `-s HornViet.Api` (startup project): công cụ đọc cấu hình của `HornViet.Api` (chuỗi kết nối, `Jwt:SecurityKey` ở `appsettings.Development.json`). Thiếu `Jwt:SecurityKey` hợp lệ thì ứng dụng không dựng được, lệnh `dotnet ef` cũng lỗi.
 - `--idempotent`: mỗi migration được bọc trong `IF NOT EXISTS (SELECT * FROM [__EFMigrationsHistory] ...)`, nên `02_schema.sql` chạy lại an toàn trên database đã có một phần migration.
-- Gỡ migration chưa áp: `dotnet ef migrations remove -p Website.Infrastructure -s Website.Api`.
+- Gỡ migration chưa áp: `dotnet ef migrations remove -p HornViet.Infrastructure -s HornViet.Api`.
 
 ### 4.3 Seed dữ liệu
 
@@ -311,11 +311,11 @@ Có hai đường, cùng dữ liệu:
 
 | | `DataSeeder` (C#) | `database/03_seed.sql` |
 |---|---|---|
-| Khi chạy | Lúc backend khởi động nếu `Database:MigrateOnStartup = true` (`Website.Api/Program.cs`) | Chạy tay bằng SSMS / `sqlcmd` |
+| Khi chạy | Lúc backend khởi động nếu `Database:MigrateOnStartup = true` (`HornViet.Api/Program.cs`) | Chạy tay bằng SSMS / `sqlcmd` |
 | Điều kiện | Từng phần: thêm vai trò còn thiếu; tạo `admin`/`staff` nếu chưa có tên đó; tạo catalog mẫu nếu chưa có danh mục nào | Bỏ qua **toàn bộ** nếu bảng `AbpRoles` đã có dữ liệu |
 | Mật khẩu demo | `Seed:AdminPassword`, `Seed:StaffPassword` (mặc định `123qwe`), băm bằng `PasswordHasher<User>` | Hash PBKDF2 của `123qwe` viết sẵn |
 | Catalog mẫu | Bật/tắt bằng `Seed:SampleCatalog` (mặc định `true`) | Luôn chèn |
-| File | `Website.Application/DataSeeder.cs` | `database/03_seed.sql` |
+| File | `HornViet.Application/DataSeeder.cs` | `database/03_seed.sql` |
 
 Dữ liệu tạo ra: 3 vai trò (`Admin` – Quản trị viên, `Staff` – Nhân viên, `Customer` – Khách hàng), 2 tài khoản demo (`admin / 123qwe`, `staff / 123qwe`, email đuôi `@honsungviet.local`), 6 danh mục, 2 nguyên liệu, 7 sản phẩm, 12 biến thể. Ảnh mẫu dùng `/uploads/sample/placeholder.svg`. Seed **không** tạo tài khoản khách hàng, đơn hàng hay phiếu nhập (nên `AverageCost` của biến thể mẫu là `NULL`).
 
@@ -344,7 +344,7 @@ sqlcmd -S localhost -E -C -b -I -f 65001 -d HonSungVietDb -i 03_seed.sql
 
 ### 5.2 Để ứng dụng tự tạo
 
-Ở Development (`Database:MigrateOnStartup = true` trong `Website.Api/appsettings.Development.json`), chỉ cần `dotnet run --project Website.Api`: `Database.MigrateAsync()` tạo database (nếu chưa có), áp migration còn thiếu, rồi `DataSeeder.SeedAsync` khởi tạo dữ liệu.
+Ở Development (`Database:MigrateOnStartup = true` trong `HornViet.Api/appsettings.Development.json`), chỉ cần `dotnet run --project HornViet.Api`: `Database.MigrateAsync()` tạo database (nếu chưa có), áp migration còn thiếu, rồi `DataSeeder.SeedAsync` khởi tạo dữ liệu.
 
 Lưu ý: database do EF tự tạo nhận collation từ `UseCollation` trong model. Nếu tạo database thủ công mà không qua `01_create_database.sql`, hãy đảm bảo collation là `Latin1_General_100_CI_AI`.
 
@@ -375,7 +375,7 @@ ALTER DATABASE [HonSungVietDb] SET MULTI_USER;
 
 - `COMPRESSION` không có trên bản SQL Server Express; bỏ tùy chọn này nếu báo lỗi.
 - Dừng backend trước khi khôi phục (lệnh `SINGLE_USER ... ROLLBACK IMMEDIATE` sẽ ngắt mọi kết nối đang mở).
-- Ảnh sản phẩm không nằm trong database mà ở `Website.Api/wwwroot/uploads/` — sao lưu thư mục này cùng lúc (xem [Cấu hình & triển khai](11-cau-hinh-trien-khai.md)).
+- Ảnh sản phẩm không nằm trong database mà ở `HornViet.Api/wwwroot/uploads/` — sao lưu thư mục này cùng lúc (xem [Cấu hình & triển khai](11-cau-hinh-trien-khai.md)).
 
 ## 6. API liên quan
 
@@ -414,13 +414,13 @@ CSDL không có API riêng. Bảng ↔ nhóm API (chi tiết ở [`../API.md`](.
 
 | Nội dung | Đường dẫn |
 |---|---|
-| DbContext, cấu hình bảng, query filter, audit | `Website.Infrastructure/Persistence/WebsiteDbContext.cs` |
-| Migration và snapshot | `Website.Infrastructure/Persistence/Migrations/` (`WebsiteDbContextModelSnapshot.cs`) |
-| Repository generic | `Website.Infrastructure/Persistence/Repositories/Repository.cs` |
-| Interface repository, Unit of Work | `Website.Domain/Interfaces/Repositories/IRepository.cs` |
-| Đăng ký DbContext | `Website.Infrastructure/DependencyInjectionRegister.cs` |
+| DbContext, cấu hình bảng, query filter, audit | `HornViet.Infrastructure/Persistence/HornVietDbContext.cs` |
+| Migration và snapshot | `HornViet.Infrastructure/Persistence/Migrations/` (`HornVietDbContextModelSnapshot.cs`) |
+| Repository generic | `HornViet.Infrastructure/Persistence/Repositories/Repository.cs` |
+| Interface repository, Unit of Work | `HornViet.Domain/Interfaces/Repositories/IRepository.cs` |
+| Đăng ký DbContext | `HornViet.Infrastructure/DependencyInjectionRegister.cs` |
 | `ISoftDelete`, `IHasCreationTime`, `Entity<TKey>` | `SharedKernel/Entity.cs` |
-| Entity | `Website.Domain/Catalog/Entities/Catalog.cs`, `Website.Domain/Carts/Entities/Cart.cs`, `Website.Domain/Orders/Entities/Order.cs`, `Website.Domain/Users/Entities/User.cs`, `Website.Domain/Users/Entities/PasswordResetToken.cs`, `Website.Domain/Inventory/Entities/StockReceipt.cs` |
-| Seed C# | `Website.Application/DataSeeder.cs` |
-| Áp migration lúc khởi động | `Website.Api/Program.cs` (`Database:MigrateOnStartup`) |
+| Entity | `HornViet.Domain/Catalog/Entities/Catalog.cs`, `HornViet.Domain/Carts/Entities/Cart.cs`, `HornViet.Domain/Orders/Entities/Order.cs`, `HornViet.Domain/Users/Entities/User.cs`, `HornViet.Domain/Users/Entities/PasswordResetToken.cs`, `HornViet.Domain/Inventory/Entities/StockReceipt.cs` |
+| Seed C# | `HornViet.Application/DataSeeder.cs` |
+| Áp migration lúc khởi động | `HornViet.Api/Program.cs` (`Database:MigrateOnStartup`) |
 | Script SQL | `database/01_create_database.sql`, `database/02_schema.sql`, `database/03_seed.sql`, `database/README.md` |

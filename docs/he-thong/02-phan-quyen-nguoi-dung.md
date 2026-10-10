@@ -17,7 +17,7 @@ Ngoài phạm vi: đăng nhập, JWT, SecurityStamp, đổi mật khẩu của c
 
 ### 2.1 Ba vai trò cố định
 
-Enum `RoleName` (`Website.Domain/Users/Enums/RoleName.cs`). Tên enum chính là giá trị lưu ở `AbpRoles.Name`, giá trị claim Role trong JWT và chuỗi frontend so sánh — **không được đổi tên** (có test `tests/Website.Domain.UnitTests/Users/RoleNameTests.cs` giữ cố định đúng ba tên `Admin`, `Staff`, `Customer`).
+Enum `RoleName` (`HornViet.Domain/Users/Enums/RoleName.cs`). Tên enum chính là giá trị lưu ở `AbpRoles.Name`, giá trị claim Role trong JWT và chuỗi frontend so sánh — **không được đổi tên** (có test `tests/HornViet.Domain.UnitTests/Users/RoleNameTests.cs` giữ cố định đúng ba tên `Admin`, `Staff`, `Customer`).
 
 | `RoleName` | `AbpRoles.DisplayName` (seed) | Mô tả |
 |---|---|---|
@@ -25,11 +25,11 @@ Enum `RoleName` (`Website.Domain/Users/Enums/RoleName.cs`). Tên enum chính là
 | `Staff` | Nhân viên | Quản lý danh mục, nguyên liệu, sản phẩm/biến thể/tồn kho, đơn hàng, xem dashboard (không có số liệu doanh thu) |
 | `Customer` | Khách hàng | Giỏ hàng, đặt hàng, đơn của tôi, hồ sơ. Tài khoản tự đăng ký luôn có vai trò này |
 
-Ba vai trò được tạo bởi `DataSeeder.SeedRolesAsync` (`Website.Application/DataSeeder.cs`), cùng hai tài khoản demo chỉ dùng cho môi trường dev: `admin / 123qwe` (Admin) và `staff / 123qwe` (Staff). Mật khẩu demo đổi được qua `Seed:AdminPassword`, `Seed:StaffPassword`.
+Ba vai trò được tạo bởi `DataSeeder.SeedRolesAsync` (`HornViet.Application/DataSeeder.cs`), cùng hai tài khoản demo chỉ dùng cho môi trường dev: `admin / 123qwe` (Admin) và `staff / 123qwe` (Staff). Mật khẩu demo đổi được qua `Seed:AdminPassword`, `Seed:StaffPassword`.
 
 ### 2.2 Policy phân quyền
 
-Khai báo trong `AuthorizationPolicies` và `AddJwtAuthentication` (`Website.Api/Authorization/Authentication.cs`):
+Khai báo trong `AuthorizationPolicies` và `AddJwtAuthentication` (`HornViet.Api/Authorization/Authentication.cs`):
 
 | Policy / attribute | Điều kiện | Dùng cho |
 |---|---|---|
@@ -42,7 +42,7 @@ Vai trò được đọc từ claim `ClaimTypes.Role` trong JWT (`RoleClaimType 
 
 ### 2.3 IAppSession — kiểm tra quyền ở tầng Application
 
-`IAppSession` (`Website.Application/Common/Interfaces/IAppSession.cs`) cho tầng Application biết ai đang đăng nhập mà không phụ thuộc HttpContext; cài đặt là `HttpContextAppSession` (`Website.Api/Authorization/Authentication.cs`) đọc claim từ JWT.
+`IAppSession` (`HornViet.Application/Common/Interfaces/IAppSession.cs`) cho tầng Application biết ai đang đăng nhập mà không phụ thuộc HttpContext; cài đặt là `HttpContextAppSession` (`HornViet.Api/Authorization/Authentication.cs`) đọc claim từ JWT.
 
 | Thành viên | Ý nghĩa |
 |---|---|
@@ -82,7 +82,7 @@ Ký hiệu: ✔ được phép · ✘ bị từ chối (401 nếu chưa đăng n
 | `StockReceipt/*` | ✘ | ✘ | ✘ | ✔ |
 | `User/*` | ✘ | ✘ | ✘ | ✔ |
 
-Nguồn: các attribute `[Authorize]` trong `Website.Api/Controllers/**`. Chi tiết từng endpoint: [API.md mục 1.3 và 2](../API.md#13-vai-trò-và-quyền).
+Nguồn: các attribute `[Authorize]` trong `HornViet.Api/Controllers/**`. Chi tiết từng endpoint: [API.md mục 1.3 và 2](../API.md#13-vai-trò-và-quyền).
 
 ### 2.5 Ma trận quyền theo màn hình
 
@@ -162,7 +162,7 @@ flowchart TD
     OK --> S["Service dùng IAppSession để lọc dữ liệu theo người dùng/vai trò"]
 ```
 
-1. `UseAuthentication` / `UseAuthorization` trong `Website.Api/Program.cs`.
+1. `UseAuthentication` / `UseAuthorization` trong `HornViet.Api/Program.cs`.
 2. Xác thực JWT và đối chiếu `SecurityStamp` trong `JwtBearerEvents.OnTokenValidated`; thất bại → `OnChallenge` trả 401 với `unauthorizedRequest: true`.
 3. Policy `Management` / `AdminOnly`; thiếu vai trò → `OnForbidden` trả 403.
 4. Trong service, `IAppSession` quyết định phạm vi dữ liệu (đơn của ai, có thấy doanh thu không...).
@@ -320,7 +320,7 @@ Phía frontend: `userApi` trong `HornViet_admin/lib/api/services.ts`. Trang Ngư
 
 ## 7. Dữ liệu
 
-Ánh xạ trong `Website.Infrastructure/Persistence/WebsiteDbContext.cs`; tên bảng giữ theo quy ước ABP. Bảng `AbpUsers` mô tả ở [01 – mục 7](01-xac-thuc-tai-khoan.md#7-dữ-liệu); toàn bộ lược đồ ở [10-co-so-du-lieu.md](10-co-so-du-lieu.md).
+Ánh xạ trong `HornViet.Infrastructure/Persistence/HornVietDbContext.cs`; tên bảng giữ theo quy ước ABP. Bảng `AbpUsers` mô tả ở [01 – mục 7](01-xac-thuc-tai-khoan.md#7-dữ-liệu); toàn bộ lược đồ ở [10-co-so-du-lieu.md](10-co-so-du-lieu.md).
 
 **`AbpRoles`** (thực thể `Role`, có xóa mềm)
 
@@ -364,21 +364,21 @@ Các cột của `AbpUsers` liên quan đến chức năng này: `IsActive` (kh�
 
 ## 9. Mã nguồn liên quan
 
-**Backend** (`Website.Api`)
+**Backend** (`HornViet.Api`)
 
 | File | Nội dung |
 |---|---|
-| `Website.Domain/Users/Enums/RoleName.cs` | Enum vai trò |
-| `Website.Domain/Users/Entities/User.cs` | `User`, `Role`, `UserRole` |
-| `Website.Application/Users/UserAppService.cs` | DTO và `UserAppService` (danh sách, tạo, đổi vai trò, khóa, đặt lại mật khẩu) |
-| `Website.Application/Common/Interfaces/IAppSession.cs` | `IAppSession`, `AppSessionExtensions` |
-| `Website.Application/DataSeeder.cs` | Seed vai trò và tài khoản demo |
-| `Website.Api/Authorization/Authentication.cs` | `AuthorizationPolicies`, `HttpContextAppSession`, đăng ký policy, `OnForbidden` |
-| `Website.Api/Controllers/Admin/UserController.cs` | API quản lý người dùng |
-| `Website.Api/Controllers/**` | Attribute `[Authorize]` làm nguồn cho ma trận quyền |
-| `Website.Application/Orders/OrderAppService.cs`, `Website.Application/Catalog/ProductAppService.cs`, `Website.Application/Statistics/StatisticAppService.cs` | Phân biệt dữ liệu theo vai trò qua `IAppSession` |
-| `Website.Infrastructure/Persistence/WebsiteDbContext.cs` | Ánh xạ `AbpRoles`, `AbpUserRoles` |
-| `tests/Website.Domain.UnitTests/Users/RoleNameTests.cs` | Giữ cố định tên vai trò |
+| `HornViet.Domain/Users/Enums/RoleName.cs` | Enum vai trò |
+| `HornViet.Domain/Users/Entities/User.cs` | `User`, `Role`, `UserRole` |
+| `HornViet.Application/Users/UserAppService.cs` | DTO và `UserAppService` (danh sách, tạo, đổi vai trò, khóa, đặt lại mật khẩu) |
+| `HornViet.Application/Common/Interfaces/IAppSession.cs` | `IAppSession`, `AppSessionExtensions` |
+| `HornViet.Application/DataSeeder.cs` | Seed vai trò và tài khoản demo |
+| `HornViet.Api/Authorization/Authentication.cs` | `AuthorizationPolicies`, `HttpContextAppSession`, đăng ký policy, `OnForbidden` |
+| `HornViet.Api/Controllers/Admin/UserController.cs` | API quản lý người dùng |
+| `HornViet.Api/Controllers/**` | Attribute `[Authorize]` làm nguồn cho ma trận quyền |
+| `HornViet.Application/Orders/OrderAppService.cs`, `HornViet.Application/Catalog/ProductAppService.cs`, `HornViet.Application/Statistics/StatisticAppService.cs` | Phân biệt dữ liệu theo vai trò qua `IAppSession` |
+| `HornViet.Infrastructure/Persistence/HornVietDbContext.cs` | Ánh xạ `AbpRoles`, `AbpUserRoles` |
+| `tests/HornViet.Domain.UnitTests/Users/RoleNameTests.cs` | Giữ cố định tên vai trò |
 
 **Frontend**
 

@@ -22,7 +22,7 @@ Tài liệu này gồm: mô hình dữ liệu, quy tắc nghiệp vụ, CRUD ở
 | Xem danh sách, xem chi tiết (`GetAll`, `Get`) | Có | Có | Có |
 | Thêm, sửa, xóa (`Create`, `Update`, `Delete`) | Không (401 / 403) | Có | Có |
 
-- Quyền ghi được khai báo bằng `[Authorize(Policy = AuthorizationPolicies.Management)]` trong `CategoryController` và `MaterialController`. Policy `Management` yêu cầu vai trò `Admin` hoặc `Staff` (`Website.Api/Authorization/Authentication.cs`).
+- Quyền ghi được khai báo bằng `[Authorize(Policy = AuthorizationPolicies.Management)]` trong `CategoryController` và `MaterialController`. Policy `Management` yêu cầu vai trò `Admin` hoặc `Staff` (`HornViet.Api/Authorization/Authentication.cs`).
 - Ở trang quản trị, menu "Danh mục" và "Nguyên liệu" hiện cho cả Nhân viên và Quản trị viên (`adminOnly: false` trong `HornViet_admin/app/(panel)/layout.tsx`).
 
 Xem thêm: [Phân quyền người dùng](02-phan-quyen-nguoi-dung.md).
@@ -31,14 +31,14 @@ Xem thêm: [Phân quyền người dùng](02-phan-quyen-nguoi-dung.md).
 
 ### 3.1 Trường dữ liệu
 
-**Danh mục** — entity `Category` (`Website.Domain/Catalog/Entities/Catalog.cs`)
+**Danh mục** — entity `Category` (`HornViet.Domain/Catalog/Entities/Catalog.cs`)
 
 | Trường | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
 | `Id` | int | Tự sinh | Khóa chính |
 | `Name` | string, tối đa 255 | Có | Duy nhất trong các bản ghi chưa xóa |
 | `Description` | string | Không | Mô tả |
-| `CreationTime` | DateTime | Tự gán | `WebsiteDbContext.ApplyAuditConcepts` gán `DateTime.Now` khi thêm |
+| `CreationTime` | DateTime | Tự gán | `HornVietDbContext.ApplyAuditConcepts` gán `DateTime.Now` khi thêm |
 | `IsDeleted` | bool | — | Cờ xóa mềm |
 
 DTO trả về (`CategoryDto`) có thêm **`ProductCount`** = số sản phẩm **đang bán** (`IsActive = true`, chưa xóa) thuộc danh mục (`CategoryAppService.Project`).
@@ -61,12 +61,12 @@ DTO trả về (`CategoryDto`) có thêm **`ProductCount`** = số sản phẩm 
 | # | Quy tắc | Nơi thực hiện |
 |---|---|---|
 | R1 | Tên bắt buộc, tối đa 255 ký tự. Tên được cắt khoảng trắng đầu/cuối (`Trim`) trước khi lưu. | DataAnnotations trong `CreateOrUpdateCategoryInput` / `CreateOrUpdateMaterialInput`; `CreateAsync`, `UpdateAsync` |
-| R2 | **Tên duy nhất trong các bản ghi chưa xóa.** Khi tạo / sửa, service kiểm tra có bản ghi khác (khác `Id`) cùng tên hay không. Bản ghi đã xóa mềm không tính, nên có thể tạo lại danh mục trùng tên với danh mục đã xóa. | `EnsureUniqueNameAsync` (service) + chỉ mục duy nhất có lọc `[IsDeleted] = 0` trên cột `Name` (`WebsiteDbContext.OnModelCreating`) |
-| R3 | So sánh tên dùng collation của CSDL `Latin1_General_100_CI_AI` (không phân biệt hoa/thường và dấu). Vì vậy "Sừng Trâu", "sung trau" được coi là **trùng** với "Sừng trâu". | `b.UseCollation("Latin1_General_100_CI_AI")` trong `WebsiteDbContext` |
-| R4 | **Xóa là xóa mềm** (`IsDeleted = true`), bản ghi vẫn còn trong CSDL. Bộ lọc toàn cục `!x.IsDeleted` khiến bản ghi đã xóa không còn xuất hiện trong mọi truy vấn. | `Repository.Delete`, `WebsiteDbContext` (bộ lọc xóa mềm) |
+| R2 | **Tên duy nhất trong các bản ghi chưa xóa.** Khi tạo / sửa, service kiểm tra có bản ghi khác (khác `Id`) cùng tên hay không. Bản ghi đã xóa mềm không tính, nên có thể tạo lại danh mục trùng tên với danh mục đã xóa. | `EnsureUniqueNameAsync` (service) + chỉ mục duy nhất có lọc `[IsDeleted] = 0` trên cột `Name` (`HornVietDbContext.OnModelCreating`) |
+| R3 | So sánh tên dùng collation của CSDL `Latin1_General_100_CI_AI` (không phân biệt hoa/thường và dấu). Vì vậy "Sừng Trâu", "sung trau" được coi là **trùng** với "Sừng trâu". | `b.UseCollation("Latin1_General_100_CI_AI")` trong `HornVietDbContext` |
+| R4 | **Xóa là xóa mềm** (`IsDeleted = true`), bản ghi vẫn còn trong CSDL. Bộ lọc toàn cục `!x.IsDeleted` khiến bản ghi đã xóa không còn xuất hiện trong mọi truy vấn. | `Repository.Delete`, `HornVietDbContext` (bộ lọc xóa mềm) |
 | R5 | **Không xóa được danh mục còn sản phẩm** — tính cả sản phẩm đang ẩn (`IsActive = false`); sản phẩm đã xóa mềm không tính. | `CategoryAppService.DeleteAsync` |
 | R6 | **Không xóa được nguyên liệu đang được sản phẩm dùng** (cùng cách tính như R5). | `MaterialAppService.DeleteAsync` |
-| R7 | Ở mức CSDL, khóa ngoại `Products → Categories` và `Products → Materials` là `Restrict` (không xóa dây chuyền). | `WebsiteDbContext.OnModelCreating` |
+| R7 | Ở mức CSDL, khóa ngoại `Products → Categories` và `Products → Materials` là `Restrict` (không xóa dây chuyền). | `HornVietDbContext.OnModelCreating` |
 | R8 | Danh sách luôn sắp theo tên tăng dần, không phân trang. | `GetAllAsync` (`OrderBy(c => c.Name)`) |
 
 > Lưu ý: cột "Đang bán" ở trang quản trị hiển thị `productCount` (chỉ đếm sản phẩm đang bán). Một danh mục hiện "0 sản phẩm" vẫn có thể **không xóa được** nếu còn sản phẩm đang ẩn (R5). Dòng gợi ý trên trang quản trị đã nói rõ điều này.
@@ -106,8 +106,8 @@ sequenceDiagram
 |---|---|---|
 | 1 | Form bên phải trang kiểm tra tên rỗng phía client ("Vui lòng nhập tên danh mục"). | `HornViet_admin/components/hsv/catalog-admin.tsx` → `save` |
 | 2 | Gọi `categoryApi.create` (không có `id`) hoặc `categoryApi.update` (có `id`). Với nguyên liệu gửi thêm `origin`. | `HornViet_admin/lib/api/services.ts` |
-| 3 | Controller bọc lời gọi trong `Run(...)`, lỗi nghiệp vụ được đổi thành 400 / 404. | `Website.Api/Controllers/Catalog/CategoryController.cs`, `Website.Api/Controllers/WebsiteBaseController.cs` |
-| 4 | `UpdateAsync` báo lỗi nếu thiếu `id` hoặc không tìm thấy bản ghi; sau đó kiểm tra trùng tên. | `Website.Application/Catalog/CategoryMaterialAppServices.cs` → `CreateAsync`, `UpdateAsync`, `EnsureUniqueNameAsync` |
+| 3 | Controller bọc lời gọi trong `Run(...)`, lỗi nghiệp vụ được đổi thành 400 / 404. | `HornViet.Api/Controllers/Catalog/CategoryController.cs`, `HornViet.Api/Controllers/HornVietBaseController.cs` |
+| 4 | `UpdateAsync` báo lỗi nếu thiếu `id` hoặc không tìm thấy bản ghi; sau đó kiểm tra trùng tên. | `HornViet.Application/Catalog/CategoryMaterialAppServices.cs` → `CreateAsync`, `UpdateAsync`, `EnsureUniqueNameAsync` |
 | 5 | Lưu thành công → frontend gọi `catalog.reload()` để cập nhật danh sách dùng chung (bộ lọc, form sản phẩm). | `HornViet_admin/contexts/catalog-context.tsx` |
 
 ### 4.2 Xóa danh mục / nguyên liệu
@@ -130,7 +130,7 @@ flowchart TD
 | 1 | `useConfirm` hiện hộp thoại "Xóa danh mục “…”?". | `catalog-admin.tsx` → `remove` |
 | 2 | Service tìm bản ghi (bộ lọc xóa mềm đang bật), nếu không có → `EntityNotFoundException` (404). | `CategoryAppService.DeleteAsync` / `MaterialAppService.DeleteAsync` |
 | 3 | Kiểm tra `Products` có bản ghi nào với `CategoryId` (hoặc `MaterialId`) bằng `id`. Có → `UserFriendlyException` (400). | như trên |
-| 4 | `Repository.Delete` đặt `IsDeleted = true` (xóa mềm), `SaveChanges`. | `Website.Infrastructure/Persistence/Repositories/Repository.cs` |
+| 4 | `Repository.Delete` đặt `IsDeleted = true` (xóa mềm), `SaveChanges`. | `HornViet.Infrastructure/Persistence/Repositories/Repository.cs` |
 | 5 | Lỗi được hiển thị bằng thông báo nổi (`notify`). | `catalog-admin.tsx` |
 
 ### 4.3 Hiển thị ở cửa hàng
@@ -216,7 +216,7 @@ Ví dụ (dữ liệu minh họa):
 | `Materials` | `Id` (PK), `Name` nvarchar(255) NOT NULL, `Origin` nvarchar(255), `Description`, `CreationTime`, `IsDeleted` | Chỉ mục duy nhất trên `Name` có lọc `[IsDeleted] = 0` |
 | `Products` | `CategoryId` (FK → `Categories`, Restrict), `MaterialId` (FK → `Materials`, Restrict) | Có chỉ mục `(IsActive, CategoryId)` |
 
-Cấu hình trong `Website.Infrastructure/Persistence/WebsiteDbContext.cs`. Toàn bộ mô hình CSDL: [Cơ sở dữ liệu](10-co-so-du-lieu.md).
+Cấu hình trong `HornViet.Infrastructure/Persistence/HornVietDbContext.cs`. Toàn bộ mô hình CSDL: [Cơ sở dữ liệu](10-co-so-du-lieu.md).
 
 ## 8. Lỗi thường gặp & cách xử lý
 
@@ -235,18 +235,18 @@ Cấu hình trong `Website.Infrastructure/Persistence/WebsiteDbContext.cs`. Toà
 
 ## 9. Mã nguồn liên quan
 
-**Backend (`Website.Api`)**
+**Backend (`HornViet.Api`)**
 
 | File | Nội dung |
 |---|---|
-| `Website.Domain/Catalog/Entities/Catalog.cs` | Entity `Category`, `Material` |
-| `Website.Application/Catalog/CategoryMaterialAppServices.cs` | DTO, input, `CategoryAppService`, `MaterialAppService` |
-| `Website.Api/Controllers/Catalog/CategoryController.cs` | API danh mục |
-| `Website.Api/Controllers/Catalog/MaterialController.cs` | API nguyên liệu |
-| `Website.Api/Controllers/WebsiteBaseController.cs` | `Run(...)` đổi lỗi nghiệp vụ thành HTTP 400 / 404 / 409 |
-| `Website.Api/Middlewares/ResponseHandling.cs` | `BusinessErrors.TryMap`, định dạng lỗi validation |
-| `Website.Infrastructure/Persistence/WebsiteDbContext.cs` | Cấu hình bảng, chỉ mục duy nhất, collation, bộ lọc xóa mềm |
-| `Website.Infrastructure/Persistence/Repositories/Repository.cs` | `Delete` = xóa mềm với entity `ISoftDelete` |
+| `HornViet.Domain/Catalog/Entities/Catalog.cs` | Entity `Category`, `Material` |
+| `HornViet.Application/Catalog/CategoryMaterialAppServices.cs` | DTO, input, `CategoryAppService`, `MaterialAppService` |
+| `HornViet.Api/Controllers/Catalog/CategoryController.cs` | API danh mục |
+| `HornViet.Api/Controllers/Catalog/MaterialController.cs` | API nguyên liệu |
+| `HornViet.Api/Controllers/HornVietBaseController.cs` | `Run(...)` đổi lỗi nghiệp vụ thành HTTP 400 / 404 / 409 |
+| `HornViet.Api/Middlewares/ResponseHandling.cs` | `BusinessErrors.TryMap`, định dạng lỗi validation |
+| `HornViet.Infrastructure/Persistence/HornVietDbContext.cs` | Cấu hình bảng, chỉ mục duy nhất, collation, bộ lọc xóa mềm |
+| `HornViet.Infrastructure/Persistence/Repositories/Repository.cs` | `Delete` = xóa mềm với entity `ISoftDelete` |
 
 **Trang quản trị (`HornViet_admin`)**
 

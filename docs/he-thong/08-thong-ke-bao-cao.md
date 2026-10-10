@@ -279,12 +279,12 @@ Nguồn của `OrderItems.UnitCost`: xem [Nhập kho & giá vốn — mục 7](0
 
 | Tầng | File |
 |---|---|
-| Application | `Website.Application/Statistics/StatisticAppService.cs` (`GetDashboardAsync`, `GetRevenueAsync`, `GetTopProductsAsync`, `CompletedOrders`, `ResolveRange`) |
-| Application — enum | `Website.Application/Statistics/Enums` (`RevenueGroupBy`) |
-| Domain — hằng số | `Website.Domain/AppConsts.cs` (`LowStockThreshold = 5`) |
-| Domain — đơn hàng | `Website.Domain/Orders/Entities/Order.cs` (`Order.TotalAmount`, `OrderItem.UnitCost`) |
-| API | `Website.Api/Controllers/Admin/StatisticController.cs` |
-| Phân quyền | `Website.Api/Authorization/Authentication.cs` (`Management`, `AdminOnly`) |
+| Application | `HornViet.Application/Statistics/StatisticAppService.cs` (`GetDashboardAsync`, `GetRevenueAsync`, `GetTopProductsAsync`, `CompletedOrders`, `ResolveRange`) |
+| Application — enum | `HornViet.Application/Statistics/Enums` (`RevenueGroupBy`) |
+| Domain — hằng số | `HornViet.Domain/AppConsts.cs` (`LowStockThreshold = 5`) |
+| Domain — đơn hàng | `HornViet.Domain/Orders/Entities/Order.cs` (`Order.TotalAmount`, `OrderItem.UnitCost`) |
+| API | `HornViet.Api/Controllers/Admin/StatisticController.cs` |
+| Phân quyền | `HornViet.Api/Authorization/Authentication.cs` (`Management`, `AdminOnly`) |
 | Frontend — Thống kê | `HornViet_admin/app/(panel)/statistics/page.tsx` |
 | Frontend — Tổng quan | `HornViet_admin/app/(panel)/page.tsx` |
 | Frontend — dữ liệu ảo | `HornViet_admin/lib/hsv/mock-cost.ts` (`mockRevenue`, `mockTopProducts`, `mockDashboard`) |
