@@ -51,10 +51,11 @@ DTO trả về (`CategoryDto`) có thêm **`ProductCount`** = số sản phẩm 
 | `Name` | string, tối đa 255 | Có | Duy nhất trong các bản ghi chưa xóa |
 | `Origin` | string, tối đa 255 | Không | Nguồn gốc / làng nghề |
 | `Description` | string | Không | Mô tả đặc điểm, tính hợp pháp |
+| `Image` | string, tối đa 500 | Không | Ảnh minh họa (`/uploads/...`); cửa hàng dùng ở trang chủ và trang Nguồn gốc, để trống thì lấy ảnh sản phẩm |
 | `CreationTime` | DateTime | Tự gán | |
 | `IsDeleted` | bool | — | Cờ xóa mềm |
 
-`MaterialDto` gồm `Id, Name, Origin, Description` (không có `ProductCount`, không có `CreationTime`).
+`MaterialDto` gồm `Id, Name, Origin, Description, Image` (không có `ProductCount`, không có `CreationTime`).
 
 ### 3.2 Quy tắc
 
@@ -105,7 +106,7 @@ sequenceDiagram
 | Bước | Mô tả | File / hàm |
 |---|---|---|
 | 1 | Form bên phải trang kiểm tra tên rỗng phía client ("Vui lòng nhập tên danh mục"). | `HornViet_admin/components/hsv/catalog-admin.tsx` → `save` |
-| 2 | Gọi `categoryApi.create` (không có `id`) hoặc `categoryApi.update` (có `id`). Với nguyên liệu gửi thêm `origin`. | `HornViet_admin/lib/api/services.ts` |
+| 2 | Gọi `categoryApi.create` (không có `id`) hoặc `categoryApi.update` (có `id`). Với nguyên liệu gửi thêm `origin` và `image` (ảnh tải lên trước qua `fileApi.uploadImage` → `File/UploadImage`). | `HornViet_admin/lib/api/services.ts` |
 | 3 | Controller bọc lời gọi trong `Run(...)`, lỗi nghiệp vụ được đổi thành 400 / 404. | `HornViet.Api/Controllers/Catalog/CategoryController.cs`, `HornViet.Api/Controllers/HornVietBaseController.cs` |
 | 4 | `UpdateAsync` báo lỗi nếu thiếu `id` hoặc không tìm thấy bản ghi; sau đó kiểm tra trùng tên. | `HornViet.Application/Catalog/CategoryMaterialAppServices.cs` → `CreateAsync`, `UpdateAsync`, `EnsureUniqueNameAsync` |
 | 5 | Lưu thành công → frontend gọi `catalog.reload()` để cập nhật danh sách dùng chung (bộ lọc, form sản phẩm). | `HornViet_admin/contexts/catalog-context.tsx` |
@@ -195,10 +196,10 @@ Chi tiết định dạng request / response: [Tài liệu API](../API.md) (mụ
 | POST | `/api/services/app/Category/Create` | Management | `{ name, description? }` | `CategoryDto` |
 | PUT | `/api/services/app/Category/Update` | Management | `{ id, name, description? }` | `CategoryDto` |
 | DELETE | `/api/services/app/Category/Delete?id=` | Management | `id` | `null` |
-| GET | `/api/services/app/Material/GetAll` | Công khai | — | `{ items: [{ id, name, origin, description }] }` |
+| GET | `/api/services/app/Material/GetAll` | Công khai | — | `{ items: [{ id, name, origin, description, image }] }` |
 | GET | `/api/services/app/Material/Get?id=` | Công khai | `id` | `MaterialDto` |
-| POST | `/api/services/app/Material/Create` | Management | `{ name, origin?, description? }` | `MaterialDto` |
-| PUT | `/api/services/app/Material/Update` | Management | `{ id, name, origin?, description? }` | `MaterialDto` |
+| POST | `/api/services/app/Material/Create` | Management | `{ name, origin?, description?, image? }` | `MaterialDto` |
+| PUT | `/api/services/app/Material/Update` | Management | `{ id, name, origin?, description?, image? }` | `MaterialDto` |
 | DELETE | `/api/services/app/Material/Delete?id=` | Management | `id` | `null` |
 
 Ví dụ (dữ liệu minh họa):
