@@ -112,8 +112,8 @@ Ký hiệu quyền: 🌐 công khai · 👤 đã đăng nhập · 🛠 Nhân vi�
 | POST | `/api/services/app/Category/Create` | 🛠 | `{ name, description? }` |
 | PUT | `/api/services/app/Category/Update` | 🛠 | `{ id, name, description? }` |
 | DELETE | `/api/services/app/Category/Delete?id=` | 🛠 | Xóa mềm; bị từ chối nếu danh mục còn sản phẩm |
-| GET | `/api/services/app/Material/GetAll` | 🌐 | → `{ items: [{ id, name, origin, description }] }` (dùng cho bộ lọc chất liệu) |
-| GET / POST / PUT / DELETE | `/api/services/app/Material/Get · Create · Update · Delete` | 🌐 / 🛠 | `{ id?, name, origin?, description? }` |
+| GET | `/api/services/app/Material/GetAll` | 🌐 | → `{ items: [{ id, name, origin, description, image }] }` (dùng cho bộ lọc chất liệu; `image` = ảnh minh họa, có thể null) |
+| GET / POST / PUT / DELETE | `/api/services/app/Material/Get · Create · Update · Delete` | 🌐 / 🛠 | `{ id?, name, origin?, description?, image? }` |
 
 Tên danh mục / nguyên liệu không được trùng (400 "… đã tồn tại").
 

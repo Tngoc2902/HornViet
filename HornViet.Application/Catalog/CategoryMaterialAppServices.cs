@@ -120,6 +120,8 @@ public class MaterialDto
     public string Name { get; set; } = null!;
     public string? Origin { get; set; }
     public string? Description { get; set; }
+    /// <summary>Ảnh minh họa (/uploads/...), null nếu chưa có.</summary>
+    public string? Image { get; set; }
 }
 
 public class CreateOrUpdateMaterialInput
@@ -133,6 +135,10 @@ public class CreateOrUpdateMaterialInput
     public string? Origin { get; set; }
 
     public string? Description { get; set; }
+
+    /// <summary>Đường dẫn ảnh trả về từ /api/services/app/File/UploadImage; null / rỗng = không có ảnh.</summary>
+    [StringLength(500)]
+    public string? Image { get; set; }
 }
 
 public interface IMaterialAppService
@@ -169,7 +175,10 @@ public class MaterialAppService : IMaterialAppService
     public async Task<MaterialDto> CreateAsync(CreateOrUpdateMaterialInput input)
     {
         await EnsureUniqueNameAsync(input.Name, null);
-        var material = new Material { Name = input.Name.Trim(), Origin = input.Origin, Description = input.Description };
+        var material = new Material
+        {
+            Name = input.Name.Trim(), Origin = input.Origin, Description = input.Description, Image = NormalizeImage(input.Image)
+        };
         await _materialRepository.InsertAsync(material);
         await _unitOfWork.SaveChangesAsync();
         return ToDto(material);
@@ -183,6 +192,7 @@ public class MaterialAppService : IMaterialAppService
         material.Name = input.Name.Trim();
         material.Origin = input.Origin;
         material.Description = input.Description;
+        material.Image = NormalizeImage(input.Image);
         await _unitOfWork.SaveChangesAsync();
         return ToDto(material);
     }
@@ -207,6 +217,8 @@ public class MaterialAppService : IMaterialAppService
             throw new UserFriendlyException($"Nguyên liệu \"{trimmed}\" đã tồn tại.");
     }
 
+    private static string? NormalizeImage(string? image) => string.IsNullOrWhiteSpace(image) ? null : image.Trim();
+
     private static MaterialDto ToDto(Material m) =>
-        new() { Id = m.Id, Name = m.Name, Origin = m.Origin, Description = m.Description };
+        new() { Id = m.Id, Name = m.Name, Origin = m.Origin, Description = m.Description, Image = m.Image };
 }
