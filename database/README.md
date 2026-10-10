@@ -27,7 +27,7 @@ sqlcmd -S localhost -E -C -b -I -f 65001 -d HonSungVietDb -i 03_seed.sql
 
 ## Cách 3 — để ứng dụng tự tạo
 
-Ở môi trường Development (`Database:MigrateOnStartup = true`), chạy `dotnet run --project Website.Api` là tự tạo database, áp migration và seed cùng dữ liệu như trên.
+Ở môi trường Development (`Database:MigrateOnStartup = true`), chạy `dotnet run --project HornViet.Api` là tự tạo database, áp migration và seed cùng dữ liệu như trên.
 
 ## Tài khoản demo
 
@@ -49,6 +49,6 @@ sqlcmd -S localhost -E -C -b -I -f 65001 -d HonSungVietDb -i 03_seed.sql
 Khi đổi model, sinh lại `02_schema.sql`:
 
 ```powershell
-dotnet ef migrations add <TenMigration> -p Website.Infrastructure -s Website.Api -o Persistence/Migrations
-dotnet ef migrations script --idempotent -p Website.Infrastructure -s Website.Api -o database/02_schema.sql
+dotnet ef migrations add <TenMigration> -p HornViet.Infrastructure -s HornViet.Api -o Persistence/Migrations
+dotnet ef migrations script --idempotent -p HornViet.Infrastructure -s HornViet.Api -o database/02_schema.sql
 ```

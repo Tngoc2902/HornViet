@@ -270,11 +270,11 @@ Không thể tự khóa hoặc tự gỡ quyền Admin của chính mình. Tài 
 | Method | Endpoint | Quyền | Query → Result |
 |---|---|---|---|
 | GET | `/api/services/app/Statistic/GetDashboard` | 🛠 | `{ pendingOrderCount, shippingOrderCount, todayOrderCount, customerCount, todayRevenue, monthRevenue, lowStockVariants: [{ productId, productName, variantId, variantName, stockQuantity }] }` — thêm `monthProfit`; `todayRevenue`/`monthRevenue`/`monthProfit` là `null` với Nhân viên |
-| GET | `/api/services/app/Statistic/GetRevenue` | 👑 | `fromDate?, toDate?` (mặc định 30 ngày gần nhất), `groupBy` → `{ fromDate, toDate, totalRevenue, totalCost, totalProfit, profitMargin, uncostedQuantity, orderCount, items: [{ period, revenue, orderCount, cost, profit, uncostedQuantity }] }` — `profitMargin` (%) là `null` khi doanh thu = 0 |
+| GET | `/api/services/app/Statistic/GetRevenue` | 👑 | `fromDate?, toDate?` (mặc định 30 ngày gần nhất), `groupBy` → `{ fromDate, toDate, totalRevenue, totalCost, totalProfit, profitMargin, uncostedQuantity, orderCount, items: [{ period, revenue, orderCount, cost, profit, uncostedQuantity }] }` — `profitMargin` (%) là `null` khi chưa có doanh thu nào có giá vốn |
 | GET | `/api/services/app/Statistic/GetTopProducts` | 👑 | `fromDate?, toDate?, top = 10` → `{ items: [{ productId, productName, quantitySold, revenue, profit, uncostedQuantity }] }` |
 
 Doanh thu chỉ tính đơn **Hoàn thành**, theo ngày đặt hàng. `items` chỉ có các ngày/tháng phát sinh doanh thu — frontend tự điền 0 cho kỳ trống khi vẽ biểu đồ.
-Giá vốn = Σ `số lượng × giá vốn lưu trên dòng đơn lúc bán`; lợi nhuận gộp = doanh thu − giá vốn. Dòng đơn bán khi biến thể chưa có giá vốn (trước phiếu nhập đầu tiên) không được tính vào giá vốn/lợi nhuận và được đếm ở `uncostedQuantity` để frontend cảnh báo.
+Giá vốn = Σ `số lượng × giá vốn lưu trên dòng đơn lúc bán`; lợi nhuận gộp = Σ `(đơn giá − giá vốn) × số lượng` trên các dòng **có** giá vốn; tỷ suất = lợi nhuận gộp / doanh thu của các dòng có giá vốn. Dòng đơn bán khi biến thể chưa có giá vốn (trước phiếu nhập đầu tiên) vẫn tính vào doanh thu nhưng không tính vào giá vốn/lợi nhuận/tỷ suất, và được đếm ở `uncostedQuantity` để frontend cảnh báo — khi đó `totalRevenue − totalCost` lớn hơn `totalProfit`.
 
 ### 2.10 Nhập kho & giá vốn 👑
 
@@ -288,7 +288,7 @@ Giá vốn = Σ `số lượng × giá vốn lưu trên dòng đơn lúc bán`; 
 
 Giá vốn tính theo **bình quân gia quyền di động** cho từng biến thể: `giá vốn mới = (tồn × giá vốn cũ + SL nhập × giá nhập) / (tồn + SL nhập)`. Hàng tồn từ trước khi có chức năng này (chưa có giá vốn) lấy giá của phiếu nhập đầu tiên. Bán hàng, hủy đơn, sửa tồn kho thủ công không làm đổi giá vốn.
 Mỗi dòng đơn lưu giá vốn tại thời điểm đặt hàng, nên giá nhập về sau không làm sai lợi nhuận đơn cũ. Giá vốn không bao giờ trả về cho khách hoặc Nhân viên.
-Chỉ **phiếu mới nhất** của một biến thể được sửa/xóa (`canEdit`), phiếu cũ hơn trả 400. Khi sửa/xóa, giá vốn bình quân được tính lại từ trạng thái trước phiếu và giá vốn của các đơn đặt sau phiếu đó được cập nhật theo. Không thể giảm số lượng / xóa phiếu nếu hàng của phiếu đã bán ra (400).
+Chỉ **phiếu mới nhất** của một biến thể được sửa/xóa (`canEdit`), phiếu cũ hơn trả 400. Khi sửa/xóa, giá vốn bình quân được tính lại từ trạng thái trước phiếu và giá vốn của các đơn đặt sau phiếu đó được cập nhật theo. Không thể giảm số lượng / hủy phiếu nếu tồn kho hiện tại không đủ để trừ phần chênh lệch (hàng đã bán ra) → 400. Hủy phiếu duy nhất của biến thể thì giá vốn trở về `null` và các đơn đặt sau phiếu thành chưa có giá vốn.
 
 ---
 

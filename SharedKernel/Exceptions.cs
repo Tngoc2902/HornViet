@@ -1,7 +1,7 @@
 // File thuộc SharedKernel: định nghĩa các lớp ngoại lệ (exception) dùng để báo lỗi nghiệp vụ từ tầng Domain
 // và Application. Tầng Domain chỉ "ném" lỗi (throw); việc đổi lỗi thành mã HTTP do middleware ResponseHandling
 // ở tầng Api đảm nhiệm — Domain không cần biết gì về HTTP.
-namespace Website.Domain.SharedKernel;
+namespace HornViet.Domain.SharedKernel;
 
 // Kế thừa Exception (lớp ngoại lệ gốc của .NET) nên có thể dùng với throw / try-catch như mọi ngoại lệ khác.
 // Phân biệt lỗi nghiệp vụ (do người dùng nhập sai, hết hàng...) với lỗi hệ thống (bug, mất kết nối CSDL):

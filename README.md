@@ -2,6 +2,7 @@
 
 Web API cho website thương mại điện tử bán đồ mỹ nghệ từ sừng (đồ án tốt nghiệp).
 Tài liệu API cho frontend: [docs/API.md](docs/API.md).
+Tài liệu hệ thống (flow logic, hướng dẫn sử dụng từng phần): [docs/he-thong](docs/he-thong/00-tong-quan.md).
 
 ## Kiến trúc
 
@@ -9,18 +10,18 @@ Cấu trúc DDD theo chuẩn của pixelz-api:
 
 ```
 SharedKernel/                    Khối dựng dùng chung: Entity<TKey>, ValueObject, IHasCreationTime, ISoftDelete, UserFriendlyException
-Website.Domain/                  Tầng Miền
+HornViet.Domain/                  Tầng Miền
   {Module}/Entities/             Catalog, Carts, Orders, Inventory, Users — entity + quy tắc nghiệp vụ (tồn kho theo biến thể, máy trạng thái đơn)
   {Module}/Enums/                Enum nghiệp vụ của module, mỗi enum một file (VD Orders/Enums/OrderStatus.cs)
   Interfaces/Repositories/       IRepository<TEntity, TKey>, IUnitOfWork
-Website.Application/             Tầng Ứng dụng: Application Service + DTO cho từng use case, DataSeeder
+HornViet.Application/             Tầng Ứng dụng: Application Service + DTO cho từng use case, DataSeeder
   {Module}/Enums/                Enum của tham số đầu vào (VD Catalog/Enums/ProductSorting.cs)
   Common/Interfaces/             IAppSession
-Website.Infrastructure/          Tầng Hạ tầng
-  Persistence/                   WebsiteDbContext, Migrations/, Repositories/
+HornViet.Infrastructure/          Tầng Hạ tầng
+  Persistence/                   HornVietDbContext, Migrations/, Repositories/
   DependencyInjectionRegister.cs AddInfrastructure(configuration)
-Website.Api/                     Web API
-  Controllers/{Module}/          Account, Catalog, Shopping, Admin (kế thừa WebsiteBaseController)
+HornViet.Api/                     Web API
+  Controllers/{Module}/          Account, Catalog, Shopping, Admin (kế thừa HornVietBaseController)
   Models/                        AjaxResponse + model riêng của API
   Authorization/                 JWT, phân quyền, IAppSession từ token
   Middlewares/                   Bọc response, xử lý lỗi, lỗi validation
@@ -47,15 +48,15 @@ Database: chạy 3 script trong [database/](database/README.md) (SSMS hoặc sql
 
 ```bash
 dotnet tool restore
-dotnet run --project Website.Api --launch-profile https
+dotnet run --project HornViet.Api --launch-profile https
 # Swagger: https://localhost:44311/swagger
 ```
 
 Ở môi trường Development, ứng dụng tự áp dụng migration và khởi tạo dữ liệu (`Database:MigrateOnStartup`):
 3 vai trò, tài khoản demo `admin / 123qwe` và `staff / 123qwe`, danh mục / nguyên liệu / sản phẩm mẫu.
-Chuỗi kết nối dev nằm trong `Website.Api/appsettings.Development.json` (`Server=localhost`, đăng nhập Windows).
+Chuỗi kết nối dev nằm trong `HornViet.Api/appsettings.Development.json` (`Server=localhost`, đăng nhập Windows).
 
-Frontend gồm hai repo gọi chung backend này; `App:CorsOrigins` trong `Website.Api/appsettings.json` đã có sẵn cả hai origin
+Frontend gồm hai repo gọi chung backend này; `App:CorsOrigins` trong `HornViet.Api/appsettings.json` đã có sẵn cả hai origin
 (CORS chỉ nạp lúc khởi động — sửa xong phải chạy lại backend):
 
 | Repo | Dành cho | Địa chỉ dev | Đăng nhập qua |
@@ -69,20 +70,20 @@ Link đặt lại mật khẩu trong email trỏ về `App:ClientRootAddress` (K
 (Nhân viên / Quản trị viên). Cấu hình gửi mail ở mục `Smtp`:
 
 - **Dev, chưa có tài khoản email** (`Smtp:Host` để trống — mặc định): email không gửi đi mà được lưu thành file `.eml`
-  trong `Website.Api/App_Data/mails/` (log ghi đường dẫn). Mở file bằng Outlook / Thunderbird hoặc trình soạn thảo để lấy link.
+  trong `HornViet.Api/App_Data/mails/` (log ghi đường dẫn). Mở file bằng Outlook / Thunderbird hoặc trình soạn thảo để lấy link.
 - **Gửi thật qua Gmail**:
   1. Bật **Xác minh 2 bước** cho tài khoản Google: https://myaccount.google.com/security
   2. Tạo **App Password** (mật khẩu ứng dụng 16 ký tự) tại https://myaccount.google.com/apppasswords
   3. Đặt cấu hình bằng user-secrets (không ghi mật khẩu vào `appsettings.json`), thay địa chỉ và mật khẩu của bạn:
 
 ```bash
-dotnet user-secrets set "Smtp:Host" "smtp.gmail.com" --project Website.Api
+dotnet user-secrets set "Smtp:Host" "smtp.gmail.com" --project HornViet.Api
 ```
 ```bash
-dotnet user-secrets set "Smtp:UserName" "ten-ban@gmail.com" --project Website.Api
+dotnet user-secrets set "Smtp:UserName" "ten-ban@gmail.com" --project HornViet.Api
 ```
 ```bash
-dotnet user-secrets set "Smtp:Password" "<app-password-16-ky-tu>" --project Website.Api
+dotnet user-secrets set "Smtp:Password" "<app-password-16-ky-tu>" --project HornViet.Api
 ```
 
   Địa chỉ người gửi tự lấy theo `Smtp:UserName` (Gmail bắt buộc gửi bằng chính tài khoản đăng nhập). Chạy lại backend:
@@ -93,7 +94,7 @@ dotnet user-secrets set "Smtp:Password" "<app-password-16-ky-tu>" --project Webs
 ### Debug bằng Visual Studio
 
 Lỗi nghiệp vụ (sai mật khẩu, hết hàng, không tìm thấy, …) được ném dưới dạng `UserFriendlyException` /
-`EntityNotFoundException` / `DbUpdateConcurrencyException`. Mọi action gọi service qua `WebsiteBaseController.Run(...)`,
+`EntityNotFoundException` / `DbUpdateConcurrencyException`. Mọi action gọi service qua `HornVietBaseController.Run(...)`,
 nơi lỗi được bắt ngay trong code của dự án và đổi thành HTTP 400 / 404 / 409 (`BusinessErrors.TryMap`). Nhờ vậy khi chạy
 bằng **F5**, Visual Studio không còn dừng ở "Exception User-Unhandled" mỗi lần người dùng nhập sai.
 Action mới phải viết dạng `=> Run(() => _service.XxxAsync(input))`; lỗi ném ngoài controller vẫn được
