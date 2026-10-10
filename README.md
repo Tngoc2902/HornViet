@@ -2,6 +2,7 @@
 
 Web API cho website thương mại điện tử bán đồ mỹ nghệ từ sừng (đồ án tốt nghiệp).
 Tài liệu API cho frontend: [docs/API.md](docs/API.md).
+Tài liệu hệ thống (flow logic, hướng dẫn sử dụng từng phần): [docs/he-thong](docs/he-thong/00-tong-quan.md).
 
 ## Kiến trúc
 
