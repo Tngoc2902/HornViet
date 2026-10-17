@@ -429,6 +429,12 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                     b.Property<DateTime>("ExpirationTime")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Purpose")
+                        .HasColumnType("integer");
+
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(64)

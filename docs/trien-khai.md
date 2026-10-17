@@ -135,10 +135,21 @@ Làm cho từng repo `HornViet_customer` và `HornViet_admin`:
 3. Google Auth Platform → **Audience → Publish app** để mọi tài khoản Gmail đăng nhập được (chế độ *Testing* chỉ cho
    *Test users*). Ứng dụng chỉ xin quyền email / hồ sơ cơ bản nên không cần Google xét duyệt.
 
-### Bước 6 (tùy chọn) — Gửi email Quên mật khẩu
+### Bước 6 — Gửi mã xác nhận Quên mật khẩu qua email (Brevo)
 
-Thêm trên Render (mỗi service): `Smtp__Host=smtp.gmail.com`, `Smtp__UserName=<gmail>`,
-`Smtp__Password=<App Password 16 ký tự của Gmail>`. Chưa cấu hình thì link đặt lại mật khẩu không được gửi đi.
+Quên mật khẩu gửi **mã 6 số (hiệu lực 60 giây)** tới email khách. Render gói miễn phí **chặn cổng SMTP**, nên dùng Brevo qua HTTPS:
+
+1. Đăng ký https://www.brevo.com (miễn phí, không cần thẻ).
+2. **Senders, domains & dedicated IPs → Senders → Add a sender**: thêm một Gmail làm người gửi, mở thư Brevo gửi tới Gmail đó và bấm link xác minh.
+3. **SMTP & API → API keys → Generate a new API key**, copy khóa (chỉ hiện một lần).
+4. Trên Render, mỗi service nhập hai biến (`Email__Provider=Brevo` đã có sẵn trong `render.yaml`):
+   - `Email__BrevoApiKey` = khóa vừa copy (bí mật).
+   - `Email__FromAddress` = Gmail đã xác minh ở bước 2.
+5. Lưu để Render deploy lại; log khởi động sẽ ghi `Gửi email qua Brevo (người gửi …)`.
+
+Chưa cấu hình thì mã không được gửi đi (backend ghi lỗi trong log, API vẫn trả thành công để không lộ tài khoản). Khi chạy trên máy phát triển
+không đặt `Email:Provider` thì email được lưu thành file `.eml` trong `HornViet.Api/App_Data/mails` — mở file để lấy mã.
+Chức năng chỉ dành cho khách hàng: tài khoản Quản trị viên / Nhân viên không nhận mã.
 
 ## 4. Biến môi trường
 
@@ -157,6 +168,9 @@ Thêm trên Render (mỗi service): `Smtp__Host=smtp.gmail.com`, `Smtp__UserName
 | `App__CorsOrigins` | `<cửa hàng staging>,<quản trị staging>` | `<cửa hàng production>,<quản trị production>` |
 | `Google__ClientId` | Client ID Google | Client ID Google |
 | `Cloudinary__Url` | `cloudinary://...` | `cloudinary://...` |
+| `Email__Provider` | `Brevo` (có sẵn) | `Brevo` (có sẵn) |
+| `Email__BrevoApiKey` | khóa API Brevo | khóa API Brevo |
+| `Email__FromAddress` | Gmail đã xác minh trong Brevo | Gmail đã xác minh trong Brevo |
 | `Cloudinary__Folder` | `hornviet-staging` (có sẵn) | `hornviet` (có sẵn) |
 
 Backend **từ chối khởi động** ngoài môi trường Development nếu `Seed__AdminPassword` / `Seed__StaffPassword` còn là
