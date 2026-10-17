@@ -329,10 +329,17 @@ public class AccountAppService : IAccountAppService
     public async Task ForgotPasswordAsync(ForgotPasswordInput input)
     {
         var email = input.EmailAddress.Trim().ToLowerInvariant();
-        var user = await _userRepository.GetAll().FirstOrDefaultAsync(u => u.EmailAddress == email);
+        var user = await _userRepository.GetAll()
+            .Include(u => u.Roles).ThenInclude(r => r.Role)
+            .FirstOrDefaultAsync(u => u.EmailAddress == email);
 
         // Email chưa đăng ký hoặc tài khoản bị khóa: không gửi gì nhưng vẫn trả thành công như bình thường.
         if (user == null || !user.IsActive)
+            return;
+
+        // Chức năng chỉ dành cho khách hàng: Quản trị viên / Nhân viên không tự khôi phục qua email (Quản trị viên đặt lại
+        // mật khẩu cho nhân viên ở trang Người dùng). Vẫn trả thành công để không lộ email nào thuộc nhân viên.
+        if (user.Roles.Any(r => r.Role?.Name is nameof(RoleName.Admin) or nameof(RoleName.Staff)))
             return;
 
         var now = DateTime.Now;
