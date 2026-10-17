@@ -75,7 +75,7 @@ var corsOrigins = (config["App:CorsOrigins"] ?? "")
 // Chính sách CORS mặc định: chỉ chấp nhận các origin trong danh sách trên, cho phép mọi header (kể cả Authorization
 // chứa JWT) và mọi phương thức (GET, POST, PUT, DELETE...). Không bật AllowCredentials vì token gửi qua header,
 // không dùng cookie.
-builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod()));
+builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
 // Bước 6 – Swagger (OpenAPI): tự sinh tài liệu mô tả API và trang thử API trực tiếp tại /swagger.
 // AddEndpointsApiExplorer giúp Swagger "khám phá" được danh sách endpoint.
