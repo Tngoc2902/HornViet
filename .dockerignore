@@ -1,0 +1,22 @@
+# Không đưa vào ngữ cảnh build Docker: kết quả build cũ, file IDE, tài liệu, test, dữ liệu chạy thử trên máy.
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/.idea/
+**/*.user
+.git/
+.github/
+.claude/
+docs/
+database/
+tests/
+**/App_Data/
+# Ảnh tải lên khi chạy trên máy; chỉ giữ ảnh mẫu dùng cho dữ liệu demo.
+HornViet.Api/wwwroot/uploads/*
+!HornViet.Api/wwwroot/uploads/sample/
+Dockerfile
+.dockerignore
+render.yaml
+# Cấu hình dev (khóa JWT dev, mật khẩu demo) — không đưa vào image.
+HornViet.Api/appsettings.Development.json
