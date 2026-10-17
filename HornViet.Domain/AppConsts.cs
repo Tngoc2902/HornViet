@@ -36,11 +36,18 @@ public static class AppConsts
     /// <summary>Số di động Việt Nam: 0xxxxxxxxx hoặc +84xxxxxxxxx.</summary>
     public const string PhoneRegex = @"^(0|\+84)(3|5|7|8|9)\d{8}$";
 
-    // Dùng ở AccountAppService (UC Quên mật khẩu): link trong email chỉ dùng được trong khoảng thời gian này.
-    /// <summary>Thời hạn (phút) của link đặt lại mật khẩu gửi qua email.</summary>
-    public const int PasswordResetTokenLifetimeMinutes = 30;
+    // Dùng ở AccountAppService (UC Quên mật khẩu): mã xác nhận 6 số gửi qua email chỉ dùng được trong khoảng này.
+    /// <summary>Thời hạn (giây) của mã xác nhận gửi qua email.</summary>
+    public const int PasswordResetCodeLifetimeSeconds = 60;
+
+    /// <summary>Số lần nhập sai tối đa cho một mã xác nhận; quá số này mã bị thu hồi, phải xin mã mới.</summary>
+    public const int PasswordResetCodeMaxAttempts = 5;
+
+    // Sau khi nhập đúng mã, người dùng nhận "vé" đặt lại mật khẩu để có thời gian nhập mật khẩu mới (mã chỉ sống 60 giây).
+    /// <summary>Thời hạn (phút) của vé đặt lại mật khẩu cấp sau khi nhập đúng mã xác nhận.</summary>
+    public const int PasswordResetTicketLifetimeMinutes = 10;
 
     // Chống spam email: trong khoảng này, yêu cầu Quên mật khẩu lặp lại cho cùng tài khoản không gửi thêm email.
-    /// <summary>Số giây tối thiểu giữa hai lần gửi email đặt lại mật khẩu cho cùng một tài khoản.</summary>
-    public const int PasswordResetResendSeconds = 60;
+    /// <summary>Số giây tối thiểu giữa hai lần gửi mã xác nhận cho cùng một tài khoản.</summary>
+    public const int PasswordResetResendSeconds = 30;
 }

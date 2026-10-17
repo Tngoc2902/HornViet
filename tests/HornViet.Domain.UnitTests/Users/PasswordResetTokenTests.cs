@@ -64,7 +64,7 @@ public class PasswordResetTokenTests
         var (token, _) = PasswordResetToken.Issue(1, Now, Lifetime);
 
         var ex = Assert.Throws<UserFriendlyException>(() => token.MarkUsed(Now.AddMinutes(31)));
-        Assert.Equal(PasswordResetToken.InvalidMessage, ex.Message);
+        Assert.Equal(PasswordResetToken.InvalidTicketMessage, ex.Message); // Issue() cấp vé
     }
 
     [Fact]
@@ -77,5 +77,58 @@ public class PasswordResetTokenTests
 
         Assert.False(token.IsUsable(Now.AddMinutes(2)));
         Assert.Equal(Now.AddMinutes(1), token.UsedTime);
+    }
+
+    // ---- Mã xác nhận 6 số (UC Quên mật khẩu bằng mã)
+
+    [Fact]
+    public void IssueCode_Creates6DigitCode_StoresOnlySaltedHash_AndExpiresIn60Seconds()
+    {
+        var (token, code) = PasswordResetToken.IssueCode(userId: 7, Now, TimeSpan.FromSeconds(60));
+
+        Assert.Matches("^[0-9]{6}$", code);
+        Assert.Equal(PasswordResetPurpose.Code, token.Purpose);
+        Assert.Equal(PasswordResetToken.HashCode(7, code), token.TokenHash);
+        Assert.NotEqual(PasswordResetToken.HashCode(8, code), token.TokenHash); // cùng mã, khác người → khác bản băm
+        Assert.True(token.IsUsable(Now.AddSeconds(59)));
+        Assert.False(token.IsUsable(Now.AddSeconds(60)));
+    }
+
+    [Fact]
+    public void Issue_CreatesTicket()
+    {
+        var (token, _) = PasswordResetToken.Issue(1, Now, Lifetime);
+
+        Assert.Equal(PasswordResetPurpose.Ticket, token.Purpose);
+    }
+
+    [Fact]
+    public void RegisterFailure_RevokesCodeAfterMaxAttempts()
+    {
+        var (token, _) = PasswordResetToken.IssueCode(1, Now, TimeSpan.FromSeconds(60));
+
+        for (var i = 1; i < 5; i++)
+        {
+            token.RegisterFailure(Now.AddSeconds(i), maxAttempts: 5);
+            Assert.True(token.IsUsable(Now.AddSeconds(i)));
+        }
+
+        token.RegisterFailure(Now.AddSeconds(5), maxAttempts: 5);
+
+        Assert.Equal(5, token.FailedAttempts);
+        Assert.False(token.IsUsable(Now.AddSeconds(6)));
+    }
+
+    [Fact]
+    public void MarkUsed_Ticket_ExpiredUsesTicketMessage()
+    {
+        var (ticket, _) = PasswordResetToken.Issue(1, Now, Lifetime);
+        var (code, _) = PasswordResetToken.IssueCode(1, Now, TimeSpan.FromSeconds(60));
+
+        var ticketEx = Assert.Throws<UserFriendlyException>(() => ticket.MarkUsed(Now.AddHours(1)));
+        var codeEx = Assert.Throws<UserFriendlyException>(() => code.MarkUsed(Now.AddHours(1)));
+
+        Assert.Equal(PasswordResetToken.InvalidTicketMessage, ticketEx.Message);
+        Assert.Equal(PasswordResetToken.InvalidMessage, codeEx.Message);
     }
 }

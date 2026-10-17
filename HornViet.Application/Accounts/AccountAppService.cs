@@ -103,10 +103,26 @@ public class ForgotPasswordInput
     public string EmailAddress { get; set; } = null!;
 }
 
-/// <summary>Input của trang Đặt lại mật khẩu: mã lấy từ link trong email và mật khẩu mới.</summary>
+/// <summary>Input bước nhập mã xác nhận: email và mã 6 số nhận qua email.</summary>
+public class VerifyResetCodeInput
+{
+    [Required(ErrorMessage = "Vui lòng nhập email."), EmailAddress(ErrorMessage = "Email không hợp lệ."), StringLength(256)]
+    public string EmailAddress { get; set; } = null!;
+
+    [Required(ErrorMessage = "Vui lòng nhập mã xác nhận."), StringLength(16)]
+    public string Code { get; set; } = null!;
+}
+
+/// <summary>Kết quả nhập đúng mã: "vé" dùng một lần để đặt mật khẩu mới (hiệu lực vài phút).</summary>
+public class VerifyResetCodeOutput
+{
+    public string ResetToken { get; set; } = null!;
+}
+
+/// <summary>Input bước đặt mật khẩu mới: vé nhận được sau khi nhập đúng mã và mật khẩu mới.</summary>
 public class ResetPasswordInput
 {
-    [Required(ErrorMessage = PasswordResetToken.InvalidMessage)]
+    [Required(ErrorMessage = PasswordResetToken.InvalidTicketMessage)]
     public string Token { get; set; } = null!;
 
     [Required(ErrorMessage = "Vui lòng nhập mật khẩu mới.")]
@@ -154,11 +170,15 @@ public interface IAccountAppService
     /// </summary>
     Task<AuthenticatedUser> AuthenticateWithGoogleAsync(GoogleLoginInput input);
     /// <summary>
-    /// UC Quên mật khẩu: gửi email chứa link đặt lại mật khẩu. Luôn kết thúc "thành công" dù email có tồn tại
-    /// hay không, để không ai dò được email nào đã đăng ký.
+    /// UC Quên mật khẩu, bước 1: gửi email chứa mã xác nhận 6 số (hiệu lực 60 giây). Luôn kết thúc "thành công" dù
+    /// email có tồn tại hay không, để không ai dò được email nào đã đăng ký.
     /// </summary>
     Task ForgotPasswordAsync(ForgotPasswordInput input);
-    /// <summary>Đặt mật khẩu mới bằng mã trong link email; mã sai / đã dùng / hết hạn → lỗi nghiệp vụ.</summary>
+    /// <summary>
+    /// Bước 2: kiểm tra mã xác nhận; đúng thì cấp "vé" để đặt mật khẩu mới. Sai quá số lần cho phép thì thu hồi mã.
+    /// </summary>
+    Task<VerifyResetCodeOutput> VerifyResetCodeAsync(VerifyResetCodeInput input);
+    /// <summary>Bước 3: đặt mật khẩu mới bằng vé; vé sai / đã dùng / hết hạn → lỗi nghiệp vụ.</summary>
     Task ResetPasswordAsync(ResetPasswordInput input);
 }
 
@@ -309,9 +329,7 @@ public class AccountAppService : IAccountAppService
     public async Task ForgotPasswordAsync(ForgotPasswordInput input)
     {
         var email = input.EmailAddress.Trim().ToLowerInvariant();
-        var user = await _userRepository.GetAll()
-            .Include(u => u.Roles).ThenInclude(r => r.Role)
-            .FirstOrDefaultAsync(u => u.EmailAddress == email);
+        var user = await _userRepository.GetAll().FirstOrDefaultAsync(u => u.EmailAddress == email);
 
         // Email chưa đăng ký hoặc tài khoản bị khóa: không gửi gì nhưng vẫn trả thành công như bình thường.
         if (user == null || !user.IsActive)
@@ -319,62 +337,91 @@ public class AccountAppService : IAccountAppService
 
         var now = DateTime.Now;
         var pending = await _resetTokenRepository.GetAll()
-            .Where(t => t.UserId == user.Id && t.UsedTime == null && t.ExpirationTime > now)
+            .Where(t => t.UserId == user.Id && t.Purpose == PasswordResetPurpose.Code && t.UsedTime == null && t.ExpirationTime > now)
             .ToListAsync();
 
         // Chống spam: vừa gửi trong vòng PasswordResetResendSeconds giây thì không gửi thêm.
         if (pending.Any(t => t.CreationTime > now.AddSeconds(-AppConsts.PasswordResetResendSeconds)))
             return;
 
-        // Chỉ link mới nhất còn dùng được.
+        // Chỉ mã mới nhất còn dùng được.
         foreach (var old in pending)
             old.Revoke(now);
 
-        var (token, rawToken) = PasswordResetToken.Issue(
-            user.Id, now, TimeSpan.FromMinutes(AppConsts.PasswordResetTokenLifetimeMinutes));
+        var (token, rawCode) = PasswordResetToken.IssueCode(
+            user.Id, now, TimeSpan.FromSeconds(AppConsts.PasswordResetCodeLifetimeSeconds));
         await _resetTokenRepository.InsertAsync(token);
         await _unitOfWork.SaveChangesAsync();
 
         try
         {
-            // Nhân viên / Quản trị viên nhận link về trang quản trị, khách hàng về trang cửa hàng.
-            var isStaff = user.Roles.Any(r => r.Role?.Name is nameof(RoleName.Admin) or nameof(RoleName.Staff));
-            var baseUrl = isStaff && !string.IsNullOrWhiteSpace(_urls.AdminRootAddress)
-                ? _urls.AdminRootAddress
-                : _urls.ClientRootAddress;
-            if (string.IsNullOrWhiteSpace(baseUrl))
-                throw new InvalidOperationException("Thiếu cấu hình App:ClientRootAddress / App:AdminRootAddress.");
-
-            var link = $"{baseUrl.TrimEnd('/')}/reset-password?token={rawToken}";
-            await _emailSender.SendAsync(user.EmailAddress, "Đặt lại mật khẩu – Hồn Sừng Việt", BuildResetEmail(user.Name, link));
+            await _emailSender.SendAsync(user.EmailAddress, "Mã xác nhận đặt lại mật khẩu – Hồn Sừng Việt", BuildCodeEmail(user.Name, rawCode));
         }
         catch (Exception ex)
         {
             // Không báo lỗi ra ngoài (sẽ lộ email này có tồn tại); thu hồi mã để người dùng gửi lại được ngay.
-            _logger.LogError(ex, "Không gửi được email đặt lại mật khẩu cho người dùng {UserId}. Kiểm tra mục Smtp (Host, UserName, Password — Gmail cần App Password)", user.Id);
+            _logger.LogError(ex, "Không gửi được mã xác nhận cho người dùng {UserId}. Kiểm tra cấu hình gửi email (Smtp hoặc Email:Provider)", user.Id);
             token.Revoke(now);
             await _unitOfWork.SaveChangesAsync();
         }
+    }
+
+    public async Task<VerifyResetCodeOutput> VerifyResetCodeAsync(VerifyResetCodeInput input)
+    {
+        var now = DateTime.Now;
+        var email = input.EmailAddress.Trim().ToLowerInvariant();
+        var user = await _userRepository.GetAll().FirstOrDefaultAsync(u => u.EmailAddress == email && u.IsActive);
+
+        // Cùng một thông báo cho email không tồn tại, mã sai, hết hạn hay bị khóa vì nhập sai quá nhiều.
+        var code = user == null ? null : await _resetTokenRepository.GetAll()
+            .Where(t => t.UserId == user.Id && t.Purpose == PasswordResetPurpose.Code && t.UsedTime == null && t.ExpirationTime > now)
+            .OrderByDescending(t => t.Id)
+            .FirstOrDefaultAsync();
+        if (user == null || code == null)
+            throw new UserFriendlyException(PasswordResetToken.InvalidMessage);
+
+        if (code.TokenHash != PasswordResetToken.HashCode(user.Id, input.Code))
+        {
+            code.RegisterFailure(now, AppConsts.PasswordResetCodeMaxAttempts);
+            await _unitOfWork.SaveChangesAsync();
+            throw new UserFriendlyException(PasswordResetToken.InvalidMessage);
+        }
+
+        // Mã đúng: dùng một lần, các vé cũ hết hiệu lực, cấp vé mới để nhập mật khẩu mới.
+        code.MarkUsed(now);
+        var oldTickets = await _resetTokenRepository.GetAll()
+            .Where(t => t.UserId == user.Id && t.Purpose == PasswordResetPurpose.Ticket && t.UsedTime == null)
+            .ToListAsync();
+        foreach (var old in oldTickets)
+            old.Revoke(now);
+
+        var (ticket, rawTicket) = PasswordResetToken.Issue(
+            user.Id, now, TimeSpan.FromMinutes(AppConsts.PasswordResetTicketLifetimeMinutes));
+        await _resetTokenRepository.InsertAsync(ticket);
+        await _unitOfWork.SaveChangesAsync();
+        return new VerifyResetCodeOutput { ResetToken = rawTicket };
     }
 
     public async Task ResetPasswordAsync(ResetPasswordInput input)
     {
         var now = DateTime.Now;
         var hash = PasswordResetToken.Hash(input.Token);
-        var token = await _resetTokenRepository.GetAll().FirstOrDefaultAsync(t => t.TokenHash == hash);
+        // Chỉ nhận vé (Purpose = Ticket): mã 6 số không đặt được mật khẩu và không bỏ qua bước giới hạn nhập sai.
+        var token = await _resetTokenRepository.GetAll()
+            .FirstOrDefaultAsync(t => t.TokenHash == hash && t.Purpose == PasswordResetPurpose.Ticket);
         if (token == null || !token.IsUsable(now))
-            throw new UserFriendlyException(PasswordResetToken.InvalidMessage);
+            throw new UserFriendlyException(PasswordResetToken.InvalidTicketMessage);
 
         var user = await _userRepository.GetAll().FirstOrDefaultAsync(u => u.Id == token.UserId && u.IsActive)
-                   ?? throw new UserFriendlyException(PasswordResetToken.InvalidMessage);
+                   ?? throw new UserFriendlyException(PasswordResetToken.InvalidTicketMessage);
 
-        // Kiểm tra độ mạnh trước khi dùng mã: mật khẩu yếu thì nhập lại được mà không phải xin link mới.
+        // Kiểm tra độ mạnh trước khi dùng vé: mật khẩu yếu thì nhập lại được mà không phải làm lại từ đầu.
         PasswordPolicy.Validate(input.NewPassword);
         user.Password = _passwordHasher.HashPassword(user, input.NewPassword);
         user.RotateSecurityStamp(); // mọi phiên đăng nhập cũ mất hiệu lực
         token.MarkUsed(now);
 
-        // Các link khác của tài khoản này cũng hết hiệu lực.
+        // Các mã / vé khác của tài khoản này cũng hết hiệu lực.
         var others = await _resetTokenRepository.GetAll()
             .Where(t => t.UserId == user.Id && t.Id != token.Id && t.UsedTime == null)
             .ToListAsync();
@@ -385,18 +432,16 @@ public class AccountAppService : IAccountAppService
         await _notifier.SessionRevokedAsync(user.Id, SessionRevokedReason.PasswordReset); // các tab / thiết bị đang mở đăng xuất ngay
     }
 
-    private static string BuildResetEmail(string name, string link)
+    private static string BuildCodeEmail(string name, string code)
     {
         var safeName = WebUtility.HtmlEncode(name);
-        var safeLink = WebUtility.HtmlEncode(link);
         return $"""
             <div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2933">
               <p>Xin chào {safeName},</p>
-              <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản Hồn Sừng Việt của bạn.</p>
-              <p><a href="{safeLink}" style="display:inline-block;padding:10px 20px;background:#14284b;color:#ffffff;text-decoration:none;border-radius:8px">Đặt lại mật khẩu</a></p>
-              <p>Hoặc mở liên kết: <br><a href="{safeLink}">{safeLink}</a></p>
-              <p>Liên kết có hiệu lực trong {AppConsts.PasswordResetTokenLifetimeMinutes} phút và chỉ dùng được một lần.</p>
-              <p>Nếu bạn không yêu cầu, hãy bỏ qua email này — mật khẩu của bạn vẫn giữ nguyên.</p>
+              <p>Mã xác nhận đặt lại mật khẩu tài khoản Hồn Sừng Việt của bạn là:</p>
+              <p style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#14284b;margin:12px 0">{code}</p>
+              <p>Mã có hiệu lực trong <b>{AppConsts.PasswordResetCodeLifetimeSeconds} giây</b> và chỉ dùng được một lần.</p>
+              <p>Nếu bạn không yêu cầu, hãy bỏ qua email này — mật khẩu của bạn vẫn giữ nguyên. Không chia sẻ mã này với bất kỳ ai.</p>
             </div>
             """;
     }
