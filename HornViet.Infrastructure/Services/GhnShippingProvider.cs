@@ -62,6 +62,8 @@ public class GhnShippingProvider : IShippingProvider
         {
             var data = await SendAsync(HttpMethod.Get, "/shiip/public-api/master-data/province", null, ct);
             return (IReadOnlyList<ShippingProvince>)data.EnumerateArray()
+                .Where(IsUsable)
+                .Where(p => !p.GetProperty("ProvinceName").GetString()!.StartsWith("Test", StringComparison.OrdinalIgnoreCase))
                 .Select(p => new ShippingProvince(p.GetProperty("ProvinceID").GetInt32(), p.GetProperty("ProvinceName").GetString()!))
                 .ToList();
         });
@@ -71,6 +73,7 @@ public class GhnShippingProvider : IShippingProvider
         {
             var data = await SendAsync(HttpMethod.Post, "/shiip/public-api/master-data/district", new { province_id = provinceId }, ct);
             return (IReadOnlyList<ShippingDistrict>)data.EnumerateArray()
+                .Where(IsUsable)
                 .Select(d => new ShippingDistrict(d.GetProperty("DistrictID").GetInt32(), provinceId, d.GetProperty("DistrictName").GetString()!))
                 .ToList();
         });
@@ -81,6 +84,7 @@ public class GhnShippingProvider : IShippingProvider
             var data = await SendAsync(HttpMethod.Post, "/shiip/public-api/master-data/ward", new { district_id = districtId }, ct);
             // WardCode do GHN trả về dạng chuỗi (hoặc số ở một số bản) — luôn đọc về chuỗi.
             return (IReadOnlyList<ShippingWard>)data.EnumerateArray()
+                .Where(IsUsable)
                 .Select(w => new ShippingWard(
                     w.GetProperty("WardCode").ValueKind == JsonValueKind.String ? w.GetProperty("WardCode").GetString()! : w.GetProperty("WardCode").GetRawText(),
                     districtId,
@@ -103,6 +107,11 @@ public class GhnShippingProvider : IShippingProvider
         }, ct);
         return new ShippingFee(data.GetProperty("total").GetDecimal());
     }
+
+    // Mục master-data có thể bị GHN tắt (IsEnable / Status = 0): không đưa cho khách chọn.
+    private static bool IsUsable(JsonElement e) =>
+        !(e.TryGetProperty("IsEnable", out var enabled) && enabled.ValueKind == JsonValueKind.Number && enabled.GetInt32() == 0) &&
+        !(e.TryGetProperty("Status", out var status) && status.ValueKind == JsonValueKind.Number && status.GetInt32() == 0);
 
     private async Task<T> Cached<T>(string key, Func<Task<T>> load)
     {
@@ -152,15 +161,26 @@ public class GhnShippingProvider : IShippingProvider
         }
     }
 
-    // GHN trả "code_message_value" / "message" tiếng Việt cho lỗi nghiệp vụ (VD "Không hỗ trợ giao hàng tới khu vực này").
+    // Lỗi GHN: chỉ cho khách thấy câu dễ hiểu. "message" của GHN thường là chuỗi kỹ thuật (VD "Lỗi gọi API: corev2_... - ..."),
+    // nên chỉ dùng code_message_value (tiếng Việt, dành cho người dùng) hoặc câu ánh xạ sẵn theo mã lỗi; chi tiết đầy đủ nằm trong log.
     private static string FriendlyMessage(string json)
     {
         try
         {
             using var doc = JsonDocument.Parse(json);
-            foreach (var name in new[] { "code_message_value", "message" })
-                if (doc.RootElement.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(v.GetString()))
-                    return v.GetString()!;
+            var root = doc.RootElement;
+            if (root.TryGetProperty("code_message", out var cm) && cm.ValueKind == JsonValueKind.String)
+                switch (cm.GetString())
+                {
+                    case "SHOP_INFO_ERROR":
+                        return "Cửa hàng chưa cập nhật địa chỉ lấy hàng trên hệ thống giao hàng. Vui lòng liên hệ cửa hàng.";
+                    case "CLIENT_NOT_OWNER_OF_SHOP":
+                        return "Cấu hình giao hàng của cửa hàng chưa đúng. Vui lòng liên hệ cửa hàng.";
+                    case "ROUTE_NOT_FOUND_SERVICE":
+                        return "Không hỗ trợ giao hàng tới khu vực này.";
+                }
+            if (root.TryGetProperty("code_message_value", out var v) && v.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(v.GetString()))
+                return v.GetString()!;
         }
         catch (JsonException) { }
         return "Dịch vụ giao hàng không tính được phí cho địa chỉ này.";
