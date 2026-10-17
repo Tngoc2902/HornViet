@@ -34,6 +34,7 @@ public class ProductAppService : IProductAppService
     private readonly IRepository<OrderItem, int> _orderItemRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAppSession _session;
+    private readonly IRealtimeNotifier _notifier;
 
     public ProductAppService(
         IRepository<Product, int> productRepository,
@@ -43,7 +44,8 @@ public class ProductAppService : IProductAppService
         IRepository<Order, int> orderRepository,
         IRepository<OrderItem, int> orderItemRepository,
         IUnitOfWork unitOfWork,
-        IAppSession session)
+        IAppSession session,
+        IRealtimeNotifier notifier)
     {
         _productRepository = productRepository;
         _categoryRepository = categoryRepository;
@@ -53,6 +55,7 @@ public class ProductAppService : IProductAppService
         _orderItemRepository = orderItemRepository;
         _unitOfWork = unitOfWork;
         _session = session;
+        _notifier = notifier;
     }
 
     // ------------------------------------------------------------------ Khách hàng
@@ -236,6 +239,7 @@ public class ProductAppService : IProductAppService
         ReplaceImages(product, input.Images);
 
         await _unitOfWork.SaveChangesAsync();
+        await _notifier.ProductChangedAsync(product.Id); // trang chi tiết đang mở tải lại giá, biến thể, tồn kho
         return await GetAsync(product.Id);
     }
 
@@ -246,6 +250,7 @@ public class ProductAppService : IProductAppService
                       ?? throw new EntityNotFoundException("Không tìm thấy sản phẩm.");
         product.IsActive = input.IsActive;
         await _unitOfWork.SaveChangesAsync();
+        await _notifier.ProductChangedAsync(product.Id);
     }
 
     /// <summary>Xóa mềm — lịch sử đơn hàng vẫn giữ nguyên nhờ ảnh chụp tên/đơn giá trong OrderItems.</summary>
@@ -260,6 +265,7 @@ public class ProductAppService : IProductAppService
 
         _productRepository.Delete(product);
         await _unitOfWork.SaveChangesAsync();
+        await _notifier.ProductChangedAsync(product.Id);
     }
 
     // ------------------------------------------------------------------ Hỗ trợ

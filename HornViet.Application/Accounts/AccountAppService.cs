@@ -18,7 +18,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 // ILogger: ghi log khi gửi email thất bại; IOptions: đọc AppUrlOptions đã đăng ký từ cấu hình.
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using HornViet.Domain.Users.Enums;
 
 namespace HornViet.Application.Accounts;
@@ -157,11 +157,12 @@ public class AccountAppService : IAccountAppService
     private readonly IEmailSender _emailSender;
     private readonly AppUrlOptions _urls;
     private readonly ILogger<AccountAppService> _logger;
+    private readonly IRealtimeNotifier _notifier;
 
     public AccountAppService(IRepository<User, long> userRepository, IRepository<Role, int> roleRepository,
         IRepository<PasswordResetToken, long> resetTokenRepository, IUnitOfWork unitOfWork,
         IPasswordHasher<User> passwordHasher, IEmailSender emailSender, IOptions<AppUrlOptions> urls,
-        ILogger<AccountAppService> logger)
+        ILogger<AccountAppService> logger, IRealtimeNotifier notifier)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
@@ -171,6 +172,7 @@ public class AccountAppService : IAccountAppService
         _emailSender = emailSender;
         _urls = urls.Value;
         _logger = logger;
+        _notifier = notifier;
     }
 
     public async Task<RegisterOutput> RegisterAsync(RegisterInput input)
@@ -298,6 +300,7 @@ public class AccountAppService : IAccountAppService
             other.Revoke(now);
 
         await _unitOfWork.SaveChangesAsync();
+        await _notifier.SessionRevokedAsync(user.Id, SessionRevokedReason.PasswordReset); // các tab / thiết bị đang mở đăng xuất ngay
     }
 
     private static string BuildResetEmail(string name, string link)

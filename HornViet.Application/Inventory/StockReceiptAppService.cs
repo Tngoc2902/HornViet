@@ -111,10 +111,11 @@ public class StockReceiptAppService : IStockReceiptAppService
     private readonly IRepository<User, long> _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAppSession _session;
+    private readonly IRealtimeNotifier _notifier;
 
     public StockReceiptAppService(IRepository<StockReceipt, int> receiptRepository, IRepository<ProductVariant, int> variantRepository,
         IRepository<Order, int> orderRepository, IRepository<OrderItem, int> orderItemRepository,
-        IRepository<User, long> userRepository, IUnitOfWork unitOfWork, IAppSession session)
+        IRepository<User, long> userRepository, IUnitOfWork unitOfWork, IAppSession session, IRealtimeNotifier notifier)
     {
         _receiptRepository = receiptRepository;
         _variantRepository = variantRepository;
@@ -123,6 +124,7 @@ public class StockReceiptAppService : IStockReceiptAppService
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _session = session;
+        _notifier = notifier;
     }
 
     public async Task<PagedResultDto<StockReceiptDto>> GetAllAsync(GetStockReceiptsInput input)
@@ -191,6 +193,7 @@ public class StockReceiptAppService : IStockReceiptAppService
         var receipt = StockReceipt.Receive(variant, input.Quantity, input.UnitCost, Clean(input.Note), _session.GetUserId());
         await _receiptRepository.InsertAsync(receipt);
         await _unitOfWork.SaveChangesAsync();
+        await NotifyStockAsync(variant);
         return await GetDtoAsync(receipt.Id);
     }
 
@@ -204,6 +207,7 @@ public class StockReceiptAppService : IStockReceiptAppService
         receipt.Correct(input.Quantity, input.UnitCost, Clean(input.Note), _session.GetUserId(), DateTime.Now);
         await RecostSalesAfterAsync(receipt);
         await _unitOfWork.SaveChangesAsync();
+        await NotifyStockAsync(receipt.ProductVariant);
         return await GetDtoAsync(receipt.Id);
     }
 
@@ -215,7 +219,12 @@ public class StockReceiptAppService : IStockReceiptAppService
         await RecostSalesAfterAsync(receipt);
         _receiptRepository.Delete(receipt);
         await _unitOfWork.SaveChangesAsync();
+        await NotifyStockAsync(receipt.ProductVariant);
     }
+
+    /// <summary>Báo tồn kho mới cho người đang xem sản phẩm (sau khi lưu); nhập kho không phát cảnh báo sắp hết.</summary>
+    private Task NotifyStockAsync(ProductVariant variant) =>
+        _notifier.StockChangedAsync([new StockChange(variant.ProductId, variant.Id, variant.StockQuantity, "", variant.DisplayName)]);
 
     private async Task<StockReceipt> LoadLatestAsync(int id)
     {

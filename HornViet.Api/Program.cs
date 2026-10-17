@@ -1,5 +1,6 @@
 using HornViet.Api.Authorization;
 using HornViet.Api.Middlewares;
+using HornViet.Api.Realtime;
 using HornViet.Application;
 using HornViet.Application.Common;
 using HornViet.Infrastructure;
@@ -35,6 +36,13 @@ builder.Services.Configure<AppUrlOptions>(config.GetSection("App"));
 // Bước 3 – Xác thực JWT, IAppSession và hai chính sách phân quyền Management / AdminOnly
 // (chi tiết trong Authorization/Authentication.cs).
 builder.Services.AddJwtAuthentication(config);
+
+// Thời gian thực (WebSocket qua SignalR): đơn mới, trạng thái đơn, tồn kho, thu hồi phiên đăng nhập.
+// SignalR có sẵn trong ASP.NET Core; tự lùi về Server-Sent Events / long polling khi mạng chặn WebSocket.
+// SignalRNotifier cài đặt IRealtimeNotifier của tầng Application (cùng kiểu IEmailSender ↔ SmtpEmailSender).
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<ConnectionTracker>();
+builder.Services.AddSingleton<IRealtimeNotifier, SignalRNotifier>();
 
 // Bước 4 – Đăng ký MVC Controllers:
 //   - Filters.Add<WrapResultFilter>(): bộ lọc toàn cục bọc mọi kết quả thành công của controller vào AjaxResponse
@@ -118,6 +126,7 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<NotificationHub>(NotificationHub.Path);
 
 app.Run();
 

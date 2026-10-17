@@ -129,6 +129,7 @@ public class OrderAppService : IOrderAppService
     private readonly IRepository<User, long> _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAppSession _session;
+    private readonly IRealtimeNotifier _notifier;
 
     public OrderAppService(
         IRepository<Order, int> orderRepository,
@@ -137,7 +138,8 @@ public class OrderAppService : IOrderAppService
         IRepository<ProductVariant, int> variantRepository,
         IRepository<User, long> userRepository,
         IUnitOfWork unitOfWork,
-        IAppSession session)
+        IAppSession session,
+        IRealtimeNotifier notifier)
     {
         _orderRepository = orderRepository;
         _cartItemRepository = cartItemRepository;
@@ -146,6 +148,7 @@ public class OrderAppService : IOrderAppService
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _session = session;
+        _notifier = notifier;
     }
 
     // ------------------------------------------------------------------ Khách hàng
@@ -192,6 +195,14 @@ public class OrderAppService : IOrderAppService
 
         await _orderRepository.InsertAsync(order);
         await _unitOfWork.SaveChangesAsync();
+
+        // Thời gian thực (sau khi đã lưu): báo quản trị có đơn mới, cập nhật tồn kho cho người đang xem sản phẩm.
+        await _notifier.OrderCreatedAsync(new OrderCreatedEvent(order.Id, Order.FormatCode(order.Id),
+            order.Items.Sum(i => i.Quantity), order.TotalAmount, order.CreationTime));
+        await _notifier.StockChangedAsync(cartItems
+            .Select(ci => new StockChange(ci.ProductVariant.ProductId, ci.ProductVariant.Id, ci.ProductVariant.StockQuantity,
+                ci.ProductVariant.Product.Name, ci.ProductVariant.DisplayName))
+            .ToList(), alertLowStock: true);
         return ToDto(order, null);
     }
 
@@ -230,8 +241,9 @@ public class OrderAppService : IOrderAppService
             throw new UserFriendlyException("Đơn hàng đã được xử lý hoặc đang giao, không thể hủy.");
 
         order.ChangeStatus(OrderStatus.Canceled);
-        await RestockAsync(order);
+        var restocked = await RestockAsync(order);
         await _unitOfWork.SaveChangesAsync();
+        await NotifyStatusChangedAsync(order, restocked);
         return ToDto(order, null);
     }
 
@@ -262,15 +274,16 @@ public class OrderAppService : IOrderAppService
     {
         var order = await LoadOrderAsync(input.Id);
         order.ChangeStatus(input.Status);
-        if (input.Status == OrderStatus.Canceled)
-            await RestockAsync(order);
+        var restocked = input.Status == OrderStatus.Canceled ? await RestockAsync(order) : [];
         await _unitOfWork.SaveChangesAsync();
+        await NotifyStatusChangedAsync(order, restocked);
         return await GetAsync(order.Id);
     }
 
     // ------------------------------------------------------------------ Hỗ trợ
 
-    private async Task RestockAsync(Order order)
+    /// <returns>Tồn kho mới của các biến thể được hoàn (để báo thời gian thực sau khi lưu).</returns>
+    private async Task<List<StockChange>> RestockAsync(Order order)
     {
         var variantIds = order.Items.Select(i => i.ProductVariantId).Distinct().ToList();
         // Bỏ bộ lọc xóa mềm: biến thể đã ngừng bán vẫn được cộng lại số lượng cho đúng sổ kho.
@@ -278,6 +291,23 @@ public class OrderAppService : IOrderAppService
             .Where(v => variantIds.Contains(v.Id)).ToListAsync();
         foreach (var item in order.Items)
             variants.First(v => v.Id == item.ProductVariantId).IncreaseStock(item.Quantity);
+
+        return order.Items
+            .GroupBy(i => i.ProductVariantId)
+            .Select(g =>
+            {
+                var v = variants.First(x => x.Id == g.Key);
+                return new StockChange(v.ProductId, v.Id, v.StockQuantity, g.First().ProductName, g.First().VariantName);
+            })
+            .ToList();
+    }
+
+    private async Task NotifyStatusChangedAsync(Order order, IReadOnlyCollection<StockChange> restocked)
+    {
+        await _notifier.OrderStatusChangedAsync(
+            new OrderStatusChangedEvent(order.Id, Order.FormatCode(order.Id), order.UserId, order.Status));
+        if (restocked.Count > 0)
+            await _notifier.StockChangedAsync(restocked);
     }
 
     private async Task<Order> LoadOrderAsync(int id) =>

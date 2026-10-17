@@ -80,15 +80,17 @@ public class ProfileAppService : IProfileAppService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IAppSession _session;
+    private readonly IRealtimeNotifier _notifier;
 
     public ProfileAppService(IRepository<User, long> userRepository, IRepository<UserAddress, int> addressRepository,
-        IUnitOfWork unitOfWork, IPasswordHasher<User> passwordHasher, IAppSession session)
+        IUnitOfWork unitOfWork, IPasswordHasher<User> passwordHasher, IAppSession session, IRealtimeNotifier notifier)
     {
         _userRepository = userRepository;
         _addressRepository = addressRepository;
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
         _session = session;
+        _notifier = notifier;
     }
 
     public async Task<ProfileDto> GetMyProfileAsync() => ToDto(await GetCurrentUserAsync());
@@ -113,6 +115,7 @@ public class ProfileAppService : IProfileAppService
         user.Password = _passwordHasher.HashPassword(user, input.NewPassword);
         user.RotateSecurityStamp(); // đăng xuất mọi phiên (kể cả phiên hiện tại) — frontend yêu cầu đăng nhập lại
         await _unitOfWork.SaveChangesAsync();
+        await _notifier.SessionRevokedAsync(user.Id, SessionRevokedReason.PasswordChanged); // các tab / thiết bị khác
     }
 
     public async Task<ListResultDto<AddressDto>> GetMyAddressesAsync()
