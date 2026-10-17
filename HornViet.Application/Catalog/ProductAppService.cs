@@ -67,8 +67,10 @@ public class ProductAppService : IProductAppService
         if (!string.IsNullOrWhiteSpace(input.Keyword))
         {
             var keyword = input.Keyword.Trim();
-            query = query.Where(p => p.Name.Contains(keyword) || p.Category.Name.Contains(keyword) ||
-                                     p.Material.Name.Contains(keyword));
+            // Không phân biệt hoa thường và dấu trên cả SQL Server lẫn PostgreSQL (xem SearchText).
+            query = query.Where(p => SearchText.Fold(p.Name).Contains(SearchText.Fold(keyword)) ||
+                                     SearchText.Fold(p.Category.Name).Contains(SearchText.Fold(keyword)) ||
+                                     SearchText.Fold(p.Material.Name).Contains(SearchText.Fold(keyword)));
         }
         if (input.CategoryIds is { Count: > 0 })
             query = query.Where(p => input.CategoryIds.Contains(p.CategoryId));
@@ -143,7 +145,10 @@ public class ProductAppService : IProductAppService
         var query = _productRepository.GetAll();
 
         if (!string.IsNullOrWhiteSpace(input.Keyword))
-            query = query.Where(p => p.Name.Contains(input.Keyword.Trim()));
+        {
+            var keyword = input.Keyword.Trim();
+            query = query.Where(p => SearchText.Fold(p.Name).Contains(SearchText.Fold(keyword)));
+        }
         if (input.CategoryId.HasValue)
             query = query.Where(p => p.CategoryId == input.CategoryId.Value);
         if (input.IsActive.HasValue)

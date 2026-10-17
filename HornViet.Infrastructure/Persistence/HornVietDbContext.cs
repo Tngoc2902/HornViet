@@ -1,4 +1,6 @@
 using System.Linq.Expressions;
+using System.Reflection;
+using HornViet.Application.Common;
 using HornViet.Domain.Carts.Entities;
 using HornViet.Domain.Catalog.Entities;
 using HornViet.Domain.Interfaces.Repositories;
@@ -7,6 +9,7 @@ using HornViet.Domain.Orders.Entities;
 using HornViet.Domain.SharedKernel;
 using HornViet.Domain.Users.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace HornViet.Infrastructure.Persistence;
@@ -14,6 +17,9 @@ namespace HornViet.Infrastructure.Persistence;
 public class HornVietDbContext : DbContext, IUnitOfWork
 {
     public HornVietDbContext(DbContextOptions<HornVietDbContext> options) : base(options) { }
+
+    /// <summary>Cho lớp con theo hệ quản trị CSDL khác (PostgreSqlHornVietDbContext).</summary>
+    protected HornVietDbContext(DbContextOptions options) : base(options) { }
 
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Material> Materials => Set<Material>();
@@ -35,9 +41,7 @@ public class HornVietDbContext : DbContext, IUnitOfWork
     {
         base.OnModelCreating(b);
 
-        // Không phân biệt hoa thường và dấu (kể cả ư, ơ, đ): khách gõ "luoc sung" vẫn tìm ra "Lược sừng".
-        // Vietnamese_CI_AI coi ư/ơ/đ là chữ riêng nên không đạt yêu cầu này.
-        b.UseCollation("Latin1_General_100_CI_AI");
+        ConfigureDatabase(b);
 
         // Mọi quan hệ khai báo hành vi xóa tường minh: Cascade chỉ cho quan hệ hợp thành
         // (Product–Variant/Image, Cart–Item, Order–Item, User–Role/Address), còn lại Restrict.
@@ -45,7 +49,7 @@ public class HornVietDbContext : DbContext, IUnitOfWork
         {
             e.ToTable("Categories");
             e.Property(x => x.Name).HasMaxLength(255).IsRequired();
-            e.HasIndex(x => x.Name).IsUnique().HasFilter("[IsDeleted] = 0");
+            e.HasIndex(x => x.Name).IsUnique().HasFilter(NotDeletedFilter);
         });
 
         b.Entity<Material>(e =>
@@ -54,7 +58,7 @@ public class HornVietDbContext : DbContext, IUnitOfWork
             e.Property(x => x.Name).HasMaxLength(255).IsRequired();
             e.Property(x => x.Origin).HasMaxLength(255);
             e.Property(x => x.Image).HasMaxLength(500);
-            e.HasIndex(x => x.Name).IsUnique().HasFilter("[IsDeleted] = 0");
+            e.HasIndex(x => x.Name).IsUnique().HasFilter(NotDeletedFilter);
         });
 
         b.Entity<Product>(e =>
@@ -76,7 +80,7 @@ public class HornVietDbContext : DbContext, IUnitOfWork
             e.ToTable("ProductVariants");
             e.Property(x => x.Size).HasMaxLength(100);
             e.Property(x => x.Style).HasMaxLength(100);
-            e.Property(x => x.RowVersion).IsRowVersion();
+            ConfigureConcurrency(e);
             // Giá vốn bình quân giữ 4 chữ số thập phân để phép chia bình quân không làm lệch tổng giá vốn.
             e.Property(x => x.AverageCost).HasPrecision(18, 4);
             e.Ignore(x => x.DisplayName);
@@ -140,11 +144,11 @@ public class HornVietDbContext : DbContext, IUnitOfWork
             e.Property(x => x.IsActive).HasDefaultValue(true);
             // Mặc định ở CSDL: tài khoản đã có (khi thêm cột) và bản ghi chèn bằng script SQL cũng có dấu bảo mật.
             e.Property(x => x.SecurityStamp).HasMaxLength(32).IsUnicode(false).IsRequired()
-                .HasDefaultValueSql("REPLACE(CONVERT(char(36), NEWID()), '-', '')");
-            e.HasIndex(x => x.UserName).IsUnique().HasFilter("[IsDeleted] = 0");
-            e.HasIndex(x => x.EmailAddress).IsUnique().HasFilter("[IsDeleted] = 0");
+                .HasDefaultValueSql(NewSecurityStampSql);
+            e.HasIndex(x => x.UserName).IsUnique().HasFilter(NotDeletedFilter);
+            e.HasIndex(x => x.EmailAddress).IsUnique().HasFilter(NotDeletedFilter);
             // Mỗi tài khoản Google chỉ liên kết với một người dùng.
-            e.HasIndex(x => x.GoogleId).IsUnique().HasFilter("[GoogleId] IS NOT NULL AND [IsDeleted] = 0");
+            e.HasIndex(x => x.GoogleId).IsUnique().HasFilter($"{Quote(nameof(User.GoogleId))} IS NOT NULL AND {NotDeletedFilter}");
             e.HasMany(x => x.Roles).WithOne().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.Addresses).WithOne().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
         });
@@ -154,7 +158,7 @@ public class HornVietDbContext : DbContext, IUnitOfWork
             e.ToTable("AbpRoles");
             e.Property(x => x.Name).HasMaxLength(32).IsRequired();
             e.Property(x => x.DisplayName).HasMaxLength(64).IsRequired();
-            e.HasIndex(x => x.Name).IsUnique().HasFilter("[IsDeleted] = 0");
+            e.HasIndex(x => x.Name).IsUnique().HasFilter(NotDeletedFilter);
         });
 
         b.Entity<UserRole>(e =>
@@ -213,6 +217,34 @@ public class HornVietDbContext : DbContext, IUnitOfWork
             b.Entity(entityType.ClrType).HasQueryFilter(Expression.Lambda(body, param));
         }
     }
+
+    // ---- Phần phụ thuộc hệ quản trị CSDL. Mặc định cho SQL Server (máy phát triển);
+    //      PostgreSqlHornVietDbContext ghi đè cho PostgreSQL (triển khai cloud).
+
+    protected static readonly MethodInfo SearchTextFold = typeof(SearchText).GetMethod(nameof(SearchText.Fold))!;
+
+    /// <summary>Tên cột trong câu SQL viết tay (bộ lọc index): SQL Server dùng [Cột].</summary>
+    protected virtual string Quote(string column) => $"[{column}]";
+
+    /// <summary>Điều kiện "chưa xóa mềm" của index lọc — unique chỉ tính trên bản ghi chưa xóa.</summary>
+    protected virtual string NotDeletedFilter => $"{Quote(nameof(ISoftDelete.IsDeleted))} = 0";
+
+    /// <summary>Giá trị mặc định ở CSDL cho SecurityStamp: 32 ký tự hex ngẫu nhiên.</summary>
+    protected virtual string NewSecurityStampSql => "REPLACE(CONVERT(char(36), NEWID()), '-', '')";
+
+    /// <summary>Thiết lập chung của CSDL: so sánh chuỗi và hàm tìm kiếm SearchText.Fold.</summary>
+    protected virtual void ConfigureDatabase(ModelBuilder b)
+    {
+        // Không phân biệt hoa thường và dấu (kể cả ư, ơ, đ): khách gõ "luoc sung" vẫn tìm ra "Lược sừng".
+        // Vietnamese_CI_AI coi ư/ơ/đ là chữ riêng nên không đạt yêu cầu này.
+        b.UseCollation("Latin1_General_100_CI_AI");
+        // Collation trên đã không phân biệt hoa thường và dấu → SearchText.Fold giữ nguyên giá trị.
+        b.HasDbFunction(SearchTextFold).HasTranslation(args => args[0]);
+    }
+
+    /// <summary>Khóa lạc quan cho tồn kho của biến thể: SQL Server dùng cột rowversion tự tăng.</summary>
+    protected virtual void ConfigureConcurrency(EntityTypeBuilder<ProductVariant> e) =>
+        e.Property(x => x.RowVersion).IsRowVersion();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

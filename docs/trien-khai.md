@@ -13,14 +13,14 @@ Tài liệu này mô tả cách đưa cả hệ thống (backend `HornViet`, tra
 | Trang cửa hàng (Next.js) | **Vercel** | HTTPS tự động, CDN toàn cầu |
 | Trang quản trị (Next.js) | **Vercel** | Project riêng |
 | Backend .NET 10 + SignalR | **Render** (Docker, vùng Singapore) | Hỗ trợ WebSocket (`wss://`), HTTPS tự động — cấu hình trong `render.yaml`, `Dockerfile` |
-| Database SQL Server | **Azure SQL Database** (gói miễn phí) | Giữ nguyên SQL Server như khi phát triển — không phải đổi mã nguồn / migration |
+| Database | **Neon** — PostgreSQL (gói Free, vùng Singapore) | Nhánh CSDL `main` cho production, `staging` cho staging. Máy phát triển vẫn dùng SQL Server — chọn bằng `Database:Provider` |
 | Ảnh sản phẩm, nguyên liệu | **Cloudinary** | Ổ đĩa của Render bị xóa mỗi lần deploy nên ảnh không lưu trên máy chủ |
 
 ```
 Trình duyệt ──HTTPS──> Vercel (cửa hàng / quản trị)
      │
      └──HTTPS / WSS──> Render (HornViet.Api: REST + Hub /hubs/notifications)
-                          ├──TLS 1433──> Azure SQL Database
+                          ├──TLS 5432──> Neon (PostgreSQL)
                           └──HTTPS─────> Cloudinary (lưu ảnh)  ·  Google (kiểm tra đăng nhập Google)
 ```
 
@@ -28,8 +28,30 @@ Giới hạn của gói miễn phí cần biết:
 
 - **Render free**: tự "ngủ" sau 15 phút không có request; lần truy cập đầu tiên sau đó chờ khoảng 1 phút. Kết nối
   real-time tự nối lại khi server thức dậy.
-- **Azure SQL free**: mỗi database 100.000 vCore-giây / tháng, 32 GB; khi rảnh database tự tạm dừng, lần kết nối đầu
-  chậm vài giây (EF Core đã bật tự thử lại — `EnableRetryOnFailure`).
+- **Neon Free**: giới hạn dung lượng và giờ chạy mỗi tháng (xem trang giá của Neon); khi rảnh database tự tạm dừng,
+  lần kết nối đầu chậm vài giây (EF Core đã bật tự thử lại — `EnableRetryOnFailure`). Không cần thẻ thanh toán.
+
+### Hai hệ quản trị CSDL
+
+Cùng một mã nguồn chạy được trên cả hai, chọn bằng cấu hình `Database:Provider`:
+
+| | Máy phát triển | Staging / production |
+|---|---|---|
+| `Database:Provider` | `SqlServer` (mặc định) | `PostgreSql` |
+| DbContext | `HornVietDbContext` | `PostgreSqlHornVietDbContext` (lớp con, chỉ ghi đè phần phụ thuộc CSDL) |
+| Migration | `Persistence/Migrations` | `Persistence/PostgreSql/Migrations` |
+| Tìm kiếm không dấu | collation `Latin1_General_100_CI_AI` | `lower(unaccent(...))` qua `SearchText.Fold` |
+| Khóa lạc quan tồn kho | cột `rowversion` | cột hệ thống `xmin` |
+
+Khi thay đổi entity phải tạo migration cho **cả hai**:
+
+```bash
+dotnet ef migrations add TenMigration --context HornVietDbContext --project HornViet.Infrastructure --startup-project HornViet.Api
+```
+
+```bash
+Database__Provider=PostgreSql ConnectionStrings__Default="Host=localhost;Database=design" dotnet ef migrations add TenMigration --context PostgreSqlHornVietDbContext --output-dir Persistence/PostgreSql/Migrations --project HornViet.Infrastructure --startup-project HornViet.Api
+```
 - **Vercel Hobby**: dùng cho dự án cá nhân / phi thương mại.
 
 ## 2. Nhánh git và quy trình đưa code lên
@@ -57,25 +79,16 @@ migration lúc khởi động.
 > Tất cả bí mật (mật khẩu database, khóa Cloudinary, mật khẩu admin…) **chỉ nhập trên trang quản lý của Render /
 > Vercel**, không ghi vào repo.
 
-### Bước 1 — Azure SQL Database
+### Bước 1 — Database PostgreSQL trên Neon
 
-1. Đăng ký **Azure for Students** (https://azure.microsoft.com/free/students) bằng email trường — không cần thẻ.
-2. Azure Portal → **Create a resource → SQL Database**:
-   - *Resource group*: tạo mới `hornviet`.
-   - *Database name*: `hornviet-staging`.
-   - *Server*: **Create new** → tên VD `hornviet-sql` (thành `hornviet-sql.database.windows.net`), vùng
-     **Southeast Asia**, *Authentication*: **Use SQL authentication**, đặt *Server admin login* và mật khẩu mạnh.
-   - Bấm **Apply offer** ở banner *"Want to try Azure SQL Database for free?"* (gói miễn phí, Serverless).
-     Chọn *"Auto-pause the database until next month"* khi hết hạn mức (không phát sinh phí).
-   - *Networking*: **Public endpoint**, bật *Allow Azure services and resources to access this server*.
-3. Tạo database thứ hai `hornviet-prod` trên **cùng server** (cũng **Apply offer**).
-4. Vào từng database → **Connection strings → ADO.NET (SQL authentication)**, copy và thay `{your_password}`. Nên tăng
-   `Connection Timeout=60` (database tự tạm dừng khi rảnh, lần đầu cần thời gian khởi động lại). Dạng chuỗi:
-   ```
-   Server=tcp:hornviet-sql.database.windows.net,1433;Initial Catalog=hornviet-prod;Persist Security Info=False;User ID=<admin>;Password=<mật khẩu>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;
-   ```
-5. Tường lửa: sau khi tạo service trên Render (Bước 3), lấy **Outbound IP ranges** của service (Render → service →
-   **Connect → Outbound**) và thêm vào Azure → SQL server → **Networking → Firewall rules**.
+1. Đăng ký https://neon.tech → **Continue with GitHub** (không cần thẻ).
+2. Tạo project: *Project name* `hornviet`, *Postgres version* **17**, *Region* **AWS Asia Pacific (Singapore)** (cùng
+   vùng với Render).
+3. Nhánh CSDL mặc định `main` dùng cho **production**. Vào **Branches → Create branch** → tên `staging`, tạo từ `main`.
+4. Lấy chuỗi kết nối cho từng nhánh: **Connect** → chọn *Branch* (`main` hoặc `staging`) → **tắt Connection pooling**
+   → copy chuỗi dạng `postgresql://...@ep-....ap-southeast-1.aws.neon.tech/neondb?sslmode=require...` (có mật khẩu — bí mật).
+   Backend tự chuyển dạng URI này sang dạng của Npgsql, dán nguyên chuỗi là được.
+5. Không cần tạo bảng: backend tự áp migration (`Database:MigrateOnStartup=true`) và cài extension `unaccent` khi khởi động.
 
 ### Bước 2 — Cloudinary
 
@@ -94,8 +107,8 @@ migration lúc khởi động.
 4. **Apply**. Địa chỉ backend có dạng `https://hornviet-api-staging.onrender.com`, `https://hornviet-api.onrender.com`
    (nếu tên đã có người dùng, Render thêm hậu tố — xem trên trang service).
 5. Kiểm tra: mở `https://<địa chỉ backend>/health` → `Healthy`.
-6. Thêm Outbound IP của **cả hai** service vào tường lửa Azure (Bước 1.5), rồi **Manual Deploy → Deploy latest commit**
-   nếu lần deploy đầu bị lỗi kết nối database.
+6. Nếu lần deploy đầu lỗi vì chưa có chuỗi kết nối: điền `ConnectionStrings__Default` rồi **Manual Deploy → Deploy latest
+   commit**.
 
 ### Bước 4 — Vercel (hai frontend)
 
@@ -134,7 +147,8 @@ Thêm trên Render (mỗi service): `Smtp__Host=smtp.gmail.com`, `Smtp__UserName
 | Biến | staging | production |
 |---|---|---|
 | `ASPNETCORE_ENVIRONMENT` | `Staging` (có sẵn) | `Production` (có sẵn) |
-| `ConnectionStrings__Default` | chuỗi kết nối `hornviet-staging` | chuỗi kết nối `hornviet-prod` |
+| `Database__Provider` | `PostgreSql` (có sẵn) | `PostgreSql` (có sẵn) |
+| `ConnectionStrings__Default` | chuỗi Neon nhánh `staging` | chuỗi Neon nhánh `main` |
 | `Jwt__SecurityKey` | Render tự sinh | Render tự sinh (khác staging) |
 | `Seed__AdminPassword`, `Seed__StaffPassword` | mật khẩu mạnh — tài khoản `admin`, `staff` được tạo lần đầu | mật khẩu mạnh, khác staging |
 | `Seed__SampleCatalog` | `true` (sản phẩm mẫu) | `false` |
@@ -181,7 +195,7 @@ Biến `NEXT_PUBLIC_*` được gắn vào mã lúc build: đổi giá trị xon
 | Hiện tượng | Nguyên nhân / cách xử lý |
 |---|---|
 | Lần mở đầu tiên rất chậm | Render free đang ngủ — chờ ~1 phút |
-| Backend log lỗi kết nối SQL (error 40615 / timeout) | Chưa thêm Outbound IP của Render vào tường lửa Azure |
+| Backend log lỗi kết nối CSDL (`Npgsql`, timeout, password authentication failed) | Sai / thiếu `ConnectionStrings__Default`, hoặc copy chuỗi khi đang bật *Connection pooling* |
 | Trình duyệt báo lỗi CORS | `App__CorsOrigins` thiếu địa chỉ frontend, hoặc có `/` ở cuối |
 | Đăng nhập Google báo `origin_mismatch` | Chưa thêm địa chỉ cửa hàng vào *Authorized JavaScript origins* (chờ vài phút sau khi lưu) |
 | Ảnh tải lên bị mất sau vài giờ | Chưa đặt `Cloudinary__Url` — ảnh đang lưu trên ổ đĩa tạm của Render |
