@@ -1,5 +1,6 @@
 using HornViet.Api.Authorization;
 using HornViet.Api.Models.Upload;
+using HornViet.Application.Common;
 using HornViet.Domain.SharedKernel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,9 +14,9 @@ public class FileController : HornVietBaseController
     private const long MaxBytes = 5 * 1024 * 1024;
     private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
 
-    private readonly IWebHostEnvironment _env;
+    private readonly IFileStorage _storage;
 
-    public FileController(IWebHostEnvironment env) => _env = env;
+    public FileController(IFileStorage storage) => _storage = storage;
 
     [HttpPost]
     [RequestSizeLimit(MaxBytes + 64 * 1024)]
@@ -32,14 +33,8 @@ public class FileController : HornVietBaseController
         if (!AllowedExtensions.Contains(extension) || !file.ContentType.StartsWith("image/"))
             throw new UserFriendlyException("Chỉ chấp nhận ảnh JPG, PNG hoặc WEBP.");
 
-        // Tên file do server sinh để tránh ghi đè và path traversal.
-        var month = DateTime.Now.ToString("yyyyMM");
-        var folder = Path.Combine(_env.WebRootPath, "uploads", month);
-        Directory.CreateDirectory(folder);
-        var fileName = $"{Guid.NewGuid():N}{extension}";
-        await using (var stream = System.IO.File.Create(Path.Combine(folder, fileName)))
-            await file.CopyToAsync(stream);
-
-        return new UploadFileOutput { Url = $"/uploads/{month}/{fileName}" };
+        // Lưu trên máy chủ (dev) hoặc Cloudinary (staging / production) tùy cấu hình — xem IFileStorage.
+        await using var stream = file.OpenReadStream();
+        return new UploadFileOutput { Url = await _storage.SaveImageAsync(stream, extension, HttpContext.RequestAborted) };
     }
 }

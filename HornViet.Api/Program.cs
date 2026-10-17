@@ -25,6 +25,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Đối tượng cấu hình dùng chung để đọc các khóa như "ConnectionStrings:Default", "Jwt:SecurityKey", "App:CorsOrigins".
 var config = builder.Configuration;
 
+// Nền tảng cloud (Render...) cấp cổng qua biến môi trường PORT và tự lo HTTPS phía trước; máy dev giữ cấu hình
+// launchSettings.json như cũ.
+if (Environment.GetEnvironmentVariable("PORT") is { Length: > 0 } port)
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 // Bước 1 – Tầng Infrastructure: đăng ký HornVietDbContext (EF Core + SQL Server, chuỗi kết nối ConnectionStrings:Default),
 // IUnitOfWork và repository generic IRepository<TEntity, TKey>.
 builder.Services.AddInfrastructure(config);
@@ -33,6 +38,11 @@ builder.Services.AddInfrastructure(config);
 builder.Services.AddApplication();
 // Địa chỉ hai frontend (App:ClientRootAddress, App:AdminRootAddress) để tạo link Quên mật khẩu trong email.
 builder.Services.Configure<AppUrlOptions>(config.GetSection("App"));
+// Lưu ảnh tải lên: Cloudinary nếu có Cloudinary:Url (staging / production), không thì wwwroot/uploads (dev).
+builder.Services.AddFileStorage(config,
+    builder.Environment.WebRootPath ?? Path.Combine(builder.Environment.ContentRootPath, "wwwroot"));
+// /health — nền tảng cloud gọi định kỳ để biết ứng dụng còn chạy (không kiểm tra CSDL: database tự tạm dừng khi rảnh).
+builder.Services.AddHealthChecks();
 // Bước 3 – Xác thực JWT, IAppSession và hai chính sách phân quyền Management / AdminOnly
 // (chi tiết trong Authorization/Authentication.cs).
 builder.Services.AddJwtAuthentication(config);
@@ -105,12 +115,21 @@ if (!smtp.SendsRealEmail)
     app.Logger.LogInformation("Smtp:Host trống — email Quên mật khẩu được lưu thành file .eml trong {Directory}",
         Path.GetFullPath(smtp.PickupDirectory));
 
+app.Logger.LogInformation("Lưu ảnh tải lên: {Storage}",
+    app.Services.GetRequiredService<IFileStorage>() is CloudinaryFileStorage ? "Cloudinary" : "wwwroot/uploads của máy chủ");
+
 if (config.GetValue("Database:MigrateOnStartup", false))
 {
+    var seed = config.GetSection("Seed").Get<SeedOptions>() ?? new SeedOptions();
+    // Staging / production: không tạo tài khoản quản trị với mật khẩu demo có sẵn trong mã nguồn.
+    var demo = new SeedOptions();
+    if (!app.Environment.IsDevelopment() && (seed.AdminPassword == demo.AdminPassword || seed.StaffPassword == demo.StaffPassword))
+        throw new InvalidOperationException(
+            "Môi trường không phải Development: đặt Seed__AdminPassword và Seed__StaffPassword (biến môi trường) khác mật khẩu demo.");
+
     using var scope = app.Services.CreateScope();
     await scope.ServiceProvider.GetRequiredService<HornVietDbContext>().Database.MigrateAsync();
-    await scope.ServiceProvider.GetRequiredService<DataSeeder>()
-        .SeedAsync(config.GetSection("Seed").Get<SeedOptions>() ?? new SeedOptions());
+    await scope.ServiceProvider.GetRequiredService<DataSeeder>().SeedAsync(seed);
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -127,6 +146,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>(NotificationHub.Path);
+app.MapHealthChecks("/health");
 
 app.Run();
 

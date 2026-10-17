@@ -1,0 +1,91 @@
+# Render Blueprint: hai web service chạy cùng Dockerfile, mỗi service deploy từ một nhánh git.
+#   hornviet-api-staging ← nhánh "staging"     (môi trường thử, database / thư mục ảnh riêng)
+#   hornviet-api         ← nhánh "production"  (môi trường thật)
+# Tạo trên Render: New → Blueprint → chọn repo HornViet. Các biến "sync: false" là bí mật / phụ thuộc môi trường:
+# Render hỏi giá trị khi tạo Blueprint (xem docs/trien-khai.md). Push lên nhánh nào thì service tương ứng tự deploy lại.
+services:
+  - type: web
+    name: hornviet-api-staging
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: staging
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    buildFilter:
+      ignoredPaths:
+        - docs/**
+        - database/**
+        - tests/**
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Staging
+      - key: Database__MigrateOnStartup
+        value: "true"
+      - key: Seed__SampleCatalog
+        value: "true"
+      - key: Seed__AdminPassword
+        sync: false
+      - key: Seed__StaffPassword
+        sync: false
+      - key: ConnectionStrings__Default
+        sync: false
+      - key: Jwt__SecurityKey
+        generateValue: true
+      - key: App__ClientRootAddress
+        sync: false
+      - key: App__AdminRootAddress
+        sync: false
+      - key: App__CorsOrigins
+        sync: false
+      - key: Google__ClientId
+        sync: false
+      - key: Cloudinary__Url
+        sync: false
+      - key: Cloudinary__Folder
+        value: hornviet-staging
+
+  - type: web
+    name: hornviet-api
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: production
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    buildFilter:
+      ignoredPaths:
+        - docs/**
+        - database/**
+        - tests/**
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Database__MigrateOnStartup
+        value: "true"
+      - key: Seed__SampleCatalog
+        value: "false"
+      - key: Seed__AdminPassword
+        sync: false
+      - key: Seed__StaffPassword
+        sync: false
+      - key: ConnectionStrings__Default
+        sync: false
+      - key: Jwt__SecurityKey
+        generateValue: true
+      - key: App__ClientRootAddress
+        sync: false
+      - key: App__AdminRootAddress
+        sync: false
+      - key: App__CorsOrigins
+        sync: false
+      - key: Google__ClientId
+        sync: false
+      - key: Cloudinary__Url
+        sync: false
+      - key: Cloudinary__Folder
+        value: hornviet

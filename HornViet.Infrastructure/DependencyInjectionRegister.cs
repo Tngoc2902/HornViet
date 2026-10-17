@@ -23,6 +23,21 @@ public static class DependencyInjectionRegister
             .AddGoogleAuth(configuration);
     }
 
+    /// <summary>
+    /// Lưu ảnh tải lên: có Cloudinary:Url thì lưu trên Cloudinary (staging / production — ổ đĩa máy chủ cloud bị xóa
+    /// mỗi lần deploy), không thì lưu vào wwwroot/uploads của máy chủ (dev).
+    /// </summary>
+    public static IServiceCollection AddFileStorage(this IServiceCollection services, IConfiguration configuration, string webRootPath)
+    {
+        var section = configuration.GetSection("Cloudinary");
+        services.Configure<CloudinaryOptions>(section);
+        if (!string.IsNullOrWhiteSpace(section["Url"]))
+            services.AddSingleton<IFileStorage, CloudinaryFileStorage>();
+        else
+            services.AddSingleton<IFileStorage>(new LocalFileStorage(webRootPath));
+        return services;
+    }
+
     /// <summary>Đăng nhập bằng Google (mục "Google"); ClientId trống thì tính năng tắt.</summary>
     public static IServiceCollection AddGoogleAuth(this IServiceCollection services, IConfiguration configuration)
     {
