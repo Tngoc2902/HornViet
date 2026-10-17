@@ -53,6 +53,12 @@ services:
         sync: false
       - key: Email__FromAddress
         sync: false
+      - key: Ghn__Token
+        sync: false
+      - key: Ghn__ShopId
+        sync: false
+      - key: Ghn__BaseUrl
+        value: https://dev-online-gateway.ghn.vn
       - key: Cloudinary__Folder
         value: hornviet-staging
 
@@ -104,5 +110,11 @@ services:
         sync: false
       - key: Email__FromAddress
         sync: false
+      - key: Ghn__Token
+        sync: false
+      - key: Ghn__ShopId
+        sync: false
+      - key: Ghn__BaseUrl
+        value: https://dev-online-gateway.ghn.vn
       - key: Cloudinary__Folder
         value: hornviet

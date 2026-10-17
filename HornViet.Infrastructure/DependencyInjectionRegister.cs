@@ -21,7 +21,8 @@ public static class DependencyInjectionRegister
         return services
             .AddPersistence(connectionString, configuration["Database:Provider"])
             .AddEmail(configuration)
-            .AddGoogleAuth(configuration);
+            .AddGoogleAuth(configuration)
+            .AddShipping(configuration);
     }
 
     /// <summary>
@@ -36,6 +37,18 @@ public static class DependencyInjectionRegister
             services.AddSingleton<IFileStorage, CloudinaryFileStorage>();
         else
             services.AddSingleton<IFileStorage>(new LocalFileStorage(webRootPath));
+        return services;
+    }
+
+    /// <summary>
+    /// Giao hàng qua Giao Hàng Nhanh (mục "Ghn"): danh mục Tỉnh / Quận / Phường và tính phí ship. Chưa đặt Ghn:Token và
+    /// Ghn:ShopId thì tính năng tắt và đặt hàng chạy như cũ.
+    /// </summary>
+    public static IServiceCollection AddShipping(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<GhnOptions>(configuration.GetSection("Ghn"));
+        services.AddMemoryCache();
+        services.AddHttpClient<IShippingProvider, GhnShippingProvider>(http => http.Timeout = TimeSpan.FromSeconds(15));
         return services;
     }
 
