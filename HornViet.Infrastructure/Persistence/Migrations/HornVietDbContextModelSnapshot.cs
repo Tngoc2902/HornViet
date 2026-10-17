@@ -501,6 +501,11 @@ namespace HornViet.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<string>("GoogleId")
+                        .HasMaxLength(255)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(255)");
+
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -541,6 +546,10 @@ namespace HornViet.Infrastructure.Persistence.Migrations
                     b.HasIndex("EmailAddress")
                         .IsUnique()
                         .HasFilter("[IsDeleted] = 0");
+
+                    b.HasIndex("GoogleId")
+                        .IsUnique()
+                        .HasFilter("[GoogleId] IS NOT NULL AND [IsDeleted] = 0");
 
                     b.HasIndex("UserName")
                         .IsUnique()

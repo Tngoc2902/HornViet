@@ -18,6 +18,10 @@ public class ProfileDto
     public string EmailAddress { get; set; } = null!;
     public string? PhoneNumber { get; set; }
     public IReadOnlyList<string> RoleNames { get; set; } = Array.Empty<string>();
+    /// <summary>false = tài khoản tạo bằng Google, chưa đặt mật khẩu (tab Đổi mật khẩu hướng dẫn tạo qua Quên mật khẩu).</summary>
+    public bool HasPassword { get; set; }
+    /// <summary>Đã liên kết tài khoản Google (đăng nhập được bằng nút Google).</summary>
+    public bool HasGoogleLogin { get; set; }
 }
 
 public class UpdateProfileInput
@@ -108,6 +112,9 @@ public class ProfileAppService : IProfileAppService
     public async Task ChangePasswordAsync(ChangePasswordInput input)
     {
         var user = await GetCurrentUserAsync();
+        // Tài khoản tạo bằng Google: tạo mật khẩu qua Quên mật khẩu (xác nhận bằng email) chứ không đặt thẳng ở đây.
+        if (!user.HasPassword)
+            throw new UserFriendlyException("Tài khoản chưa có mật khẩu. Vui lòng dùng “Quên mật khẩu” để tạo mật khẩu.");
         if (_passwordHasher.VerifyHashedPassword(user, user.Password, input.CurrentPassword) == PasswordVerificationResult.Failed)
             throw new UserFriendlyException("Mật khẩu hiện tại không đúng.");
 
@@ -203,6 +210,8 @@ public class ProfileAppService : IProfileAppService
         Name = user.Name,
         EmailAddress = user.EmailAddress,
         PhoneNumber = user.PhoneNumber,
-        RoleNames = user.Roles.Where(r => r.Role != null).Select(r => r.Role.Name).ToList()
+        RoleNames = user.Roles.Where(r => r.Role != null).Select(r => r.Role.Name).ToList(),
+        HasPassword = user.HasPassword,
+        HasGoogleLogin = user.GoogleId != null
     };
 }

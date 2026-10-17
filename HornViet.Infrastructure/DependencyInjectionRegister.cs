@@ -19,7 +19,16 @@ public static class DependencyInjectionRegister
 
         return services
             .AddPersistence(connectionString)
-            .AddEmail(configuration);
+            .AddEmail(configuration)
+            .AddGoogleAuth(configuration);
+    }
+
+    /// <summary>Đăng nhập bằng Google (mục "Google"); ClientId trống thì tính năng tắt.</summary>
+    public static IServiceCollection AddGoogleAuth(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<GoogleAuthOptions>(configuration.GetSection("Google"));
+        services.AddHttpClient<IGoogleTokenValidator, GoogleTokenValidator>(http => http.Timeout = TimeSpan.FromSeconds(10));
+        return services;
     }
 
     /// <summary>Gửi email qua SMTP (mục "Smtp"); Host trống thì lưu email thành file .eml để thử ở môi trường dev.</summary>
