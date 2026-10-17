@@ -136,7 +136,7 @@ public class StockReceiptAppService : IStockReceiptAppService
         if (!string.IsNullOrWhiteSpace(input.Keyword))
         {
             var keyword = input.Keyword.Trim();
-            query = query.Where(r => r.ProductVariant.Product.Name.Contains(keyword));
+            query = query.Where(r => SearchText.Fold(r.ProductVariant.Product.Name).Contains(SearchText.Fold(keyword)));
         }
 
         var totalCount = await query.CountAsync();
@@ -151,7 +151,7 @@ public class StockReceiptAppService : IStockReceiptAppService
         if (!string.IsNullOrWhiteSpace(input.Keyword))
         {
             var keyword = input.Keyword.Trim();
-            query = query.Where(v => v.Product.Name.Contains(keyword));
+            query = query.Where(v => SearchText.Fold(v.Product.Name).Contains(SearchText.Fold(keyword)));
         }
 
         var receipts = _receiptRepository.GetAll();

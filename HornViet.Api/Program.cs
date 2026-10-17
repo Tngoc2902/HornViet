@@ -30,7 +30,8 @@ var config = builder.Configuration;
 if (Environment.GetEnvironmentVariable("PORT") is { Length: > 0 } port)
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
-// Bước 1 – Tầng Infrastructure: đăng ký HornVietDbContext (EF Core + SQL Server, chuỗi kết nối ConnectionStrings:Default),
+// Bước 1 – Tầng Infrastructure: đăng ký HornVietDbContext (EF Core; Database:Provider = SqlServer khi phát triển,
+// PostgreSql khi triển khai cloud; chuỗi kết nối ConnectionStrings:Default),
 // IUnitOfWork và repository generic IRepository<TEntity, TKey>.
 builder.Services.AddInfrastructure(config);
 // Bước 2 – Tầng Application: đăng ký các Application Service (Account, Profile, Category, Material, Product, Cart,

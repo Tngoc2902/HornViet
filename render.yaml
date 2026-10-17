@@ -1,6 +1,7 @@
 # Render Blueprint: hai web service chạy cùng Dockerfile, mỗi service deploy từ một nhánh git.
 #   hornviet-api-staging ← nhánh "staging"     (môi trường thử, database / thư mục ảnh riêng)
 #   hornviet-api         ← nhánh "production"  (môi trường thật)
+# CSDL: PostgreSQL trên Neon (nhánh CSDL staging / main); máy phát triển vẫn dùng SQL Server.
 # Tạo trên Render: New → Blueprint → chọn repo HornViet. Các biến "sync: false" là bí mật / phụ thuộc môi trường:
 # Render hỏi giá trị khi tạo Blueprint (xem docs/trien-khai.md). Push lên nhánh nào thì service tương ứng tự deploy lại.
 services:
@@ -22,6 +23,8 @@ services:
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Staging
+      - key: Database__Provider
+        value: PostgreSql
       - key: Database__MigrateOnStartup
         value: "true"
       - key: Seed__SampleCatalog
@@ -65,6 +68,8 @@ services:
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
+      - key: Database__Provider
+        value: PostgreSql
       - key: Database__MigrateOnStartup
         value: "true"
       - key: Seed__SampleCatalog

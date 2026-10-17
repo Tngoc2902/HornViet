@@ -263,7 +263,7 @@ public class OrderAppService : IOrderAppService
         {
             var keyword = input.Keyword.Trim();
             var codeId = TryParseOrderCode(keyword);
-            query = query.Where(o => o.Id == codeId || o.ReceiverName.Contains(keyword) || o.PhoneNumber.Contains(keyword));
+            query = query.Where(o => o.Id == codeId || SearchText.Fold(o.ReceiverName).Contains(SearchText.Fold(keyword)) || o.PhoneNumber.Contains(keyword));
         }
 
         return await ToPagedListAsync(query, input);
