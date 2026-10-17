@@ -101,10 +101,11 @@ public class UserAppService : IUserAppService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IAppSession _session;
+    private readonly IRealtimeNotifier _notifier;
 
     public UserAppService(IRepository<User, long> userRepository, IRepository<Role, int> roleRepository,
         IRepository<UserRole, long> userRoleRepository, IUnitOfWork unitOfWork,
-        IPasswordHasher<User> passwordHasher, IAppSession session)
+        IPasswordHasher<User> passwordHasher, IAppSession session, IRealtimeNotifier notifier)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
@@ -112,6 +113,7 @@ public class UserAppService : IUserAppService
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
         _session = session;
+        _notifier = notifier;
     }
 
     public async Task<PagedResultDto<UserDto>> GetAllAsync(GetUsersInput input)
@@ -203,10 +205,12 @@ public class UserAppService : IUserAppService
             user.Roles.Add(new UserRole { RoleId = role.Id, Role = role });
 
         // Token cũ còn mang vai trò cũ: thu hồi để người dùng đăng nhập lại và nhận quyền mới.
-        if (removed.Count > 0 || added.Count > 0)
+        var rolesChanged = removed.Count > 0 || added.Count > 0;
+        if (rolesChanged)
             user.RotateSecurityStamp();
-
         await _unitOfWork.SaveChangesAsync();
+        if (rolesChanged)
+            await _notifier.SessionRevokedAsync(user.Id, SessionRevokedReason.RolesChanged);
         return ToDto(user);
     }
 
@@ -219,6 +223,8 @@ public class UserAppService : IUserAppService
         var user = await LoadUserAsync(input.UserId);
         user.IsActive = input.IsActive;
         await _unitOfWork.SaveChangesAsync();
+        if (!input.IsActive)
+            await _notifier.SessionRevokedAsync(user.Id, SessionRevokedReason.Locked); // đăng xuất ngay, không đợi lần gọi API kế tiếp
         return ToDto(user);
     }
 
@@ -233,6 +239,7 @@ public class UserAppService : IUserAppService
         user.Password = _passwordHasher.HashPassword(user, input.NewPassword);
         user.RotateSecurityStamp(); // mọi phiên đăng nhập cũ của tài khoản đó mất hiệu lực
         await _unitOfWork.SaveChangesAsync();
+        await _notifier.SessionRevokedAsync(user.Id, SessionRevokedReason.PasswordReset);
     }
 
     private async Task<List<Role>> ResolveRolesAsync(IEnumerable<string> roleNames)

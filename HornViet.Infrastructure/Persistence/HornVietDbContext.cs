@@ -136,12 +136,15 @@ public class HornVietDbContext : DbContext, IUnitOfWork
             e.Property(x => x.EmailAddress).HasMaxLength(256).IsRequired();
             e.Property(x => x.Password).HasMaxLength(128).IsRequired();
             e.Property(x => x.PhoneNumber).HasMaxLength(32);
+            e.Property(x => x.GoogleId).HasMaxLength(255).IsUnicode(false);
             e.Property(x => x.IsActive).HasDefaultValue(true);
             // Mặc định ở CSDL: tài khoản đã có (khi thêm cột) và bản ghi chèn bằng script SQL cũng có dấu bảo mật.
             e.Property(x => x.SecurityStamp).HasMaxLength(32).IsUnicode(false).IsRequired()
                 .HasDefaultValueSql("REPLACE(CONVERT(char(36), NEWID()), '-', '')");
             e.HasIndex(x => x.UserName).IsUnique().HasFilter("[IsDeleted] = 0");
             e.HasIndex(x => x.EmailAddress).IsUnique().HasFilter("[IsDeleted] = 0");
+            // Mỗi tài khoản Google chỉ liên kết với một người dùng.
+            e.HasIndex(x => x.GoogleId).IsUnique().HasFilter("[GoogleId] IS NOT NULL AND [IsDeleted] = 0");
             e.HasMany(x => x.Roles).WithOne().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.Addresses).WithOne().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
         });

@@ -26,6 +26,14 @@ public class TokenAuthController : HornVietBaseController
         Run(async () => CreateResult(await _accountAppService.ValidateCredentialsAsync(model)));
 
     /// <summary>
+    /// Đăng nhập cửa hàng bằng Google: nhận access token Google cấp cho trang cửa hàng, chưa có tài khoản thì tạo
+    /// tài khoản Khách hàng. Trả về cùng dạng token như đăng nhập bằng mật khẩu.
+    /// </summary>
+    [HttpPost]
+    public Task<ActionResult<AuthenticateResultModel>> AuthenticateGoogle([FromBody] GoogleLoginInput input) =>
+        Run(async () => CreateResult(await _accountAppService.AuthenticateWithGoogleAsync(input)));
+
+    /// <summary>
     /// Đăng nhập trang quản trị (HornViet_admin): chỉ cấp token cho Nhân viên / Quản trị viên.
     /// Tài khoản Khách hàng nhận 400 và không có token.
     /// </summary>

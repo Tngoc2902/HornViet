@@ -8,8 +8,11 @@ public class User : Entity<long>, IHasCreationTime, ISoftDelete
     public string UserName { get; set; } = null!;
     public string Name { get; set; } = null!;
     public string EmailAddress { get; set; } = null!;
-    public string Password { get; set; } = null!; // chỉ lưu hash
+    public string Password { get; set; } = null!; // chỉ lưu hash; rỗng = tài khoản tạo bằng Google, chưa đặt mật khẩu
     public string? PhoneNumber { get; set; }
+
+    /// <summary>Mã định danh cố định của tài khoản Google ("sub") đã liên kết; null = chưa liên kết.</summary>
+    public string? GoogleId { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreationTime { get; set; }
     public bool IsDeleted { get; set; }
@@ -22,6 +25,9 @@ public class User : Entity<long>, IHasCreationTime, ISoftDelete
 
     public List<UserRole> Roles { get; set; } = new();
     public List<UserAddress> Addresses { get; set; } = new();
+
+    /// <summary>Đã có mật khẩu để đăng nhập bằng email / tên đăng nhập (tài khoản tạo bằng Google thì chưa).</summary>
+    public bool HasPassword => !string.IsNullOrEmpty(Password);
 
     /// <summary>Thu hồi mọi phiên đăng nhập hiện có của tài khoản (token cũ không còn hợp lệ).</summary>
     public void RotateSecurityStamp() => SecurityStamp = NewSecurityStamp();

@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using HornViet.Api.Middlewares;
 using HornViet.Api.Models;
+using HornViet.Api.Realtime;
 using HornViet.Application.Accounts;
 using HornViet.Application.Common;
 using HornViet.Domain.Interfaces.Repositories;
@@ -10,7 +11,7 @@ using HornViet.Domain.Users.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.IdentityModel.Tokens;
 using HornViet.Domain.Users.Enums;
 
 namespace HornViet.Api.Authorization;
@@ -115,6 +116,15 @@ public static class AuthenticationSetup
                 };
                 options.Events = new JwtBearerEvents
                 {
+                    // WebSocket của trình duyệt không gửi được header Authorization: client SignalR đặt token vào
+                    // ?access_token= — chỉ chấp nhận cách này cho đường dẫn Hub, các API khác vẫn bắt buộc dùng header.
+                    OnMessageReceived = ctx =>
+                    {
+                        var accessToken = ctx.Request.Query["access_token"];
+                        if (!string.IsNullOrEmpty(accessToken) && ctx.HttpContext.Request.Path.StartsWithSegments(NotificationHub.Path))
+                            ctx.Token = accessToken;
+                        return Task.CompletedTask;
+                    },
                     // Token mất hiệu lực ngay khi tài khoản bị khóa / xóa, hoặc khi SecurityStamp đã đổi
                     // (đổi / đặt lại mật khẩu, đổi vai trò). Token phát hành trước khi có claim này cũng bị từ chối.
                     OnTokenValidated = async ctx =>

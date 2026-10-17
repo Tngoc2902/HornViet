@@ -18,7 +18,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 // ILogger: ghi log khi gửi email thất bại; IOptions: đọc AppUrlOptions đã đăng ký từ cấu hình.
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using HornViet.Domain.Users.Enums;
 
 namespace HornViet.Application.Accounts;
@@ -86,6 +86,16 @@ public class AuthenticateModel
     public string Password { get; set; } = null!;
 }
 
+/// <summary>
+/// Input của nút "Đăng nhập bằng Google": access token Google cấp cho trang cửa hàng sau khi khách chọn tài khoản.
+/// Backend tự hỏi Google để kiểm tra token này, không tin thông tin nào khác từ frontend.
+/// </summary>
+public class GoogleLoginInput
+{
+    [Required(ErrorMessage = "Thiếu thông tin xác thực Google.")]
+    public string AccessToken { get; set; } = null!;
+}
+
 /// <summary>Input của form Quên mật khẩu: email đã đăng ký.</summary>
 public class ForgotPasswordInput
 {
@@ -139,6 +149,11 @@ public interface IAccountAppService
     /// <returns>Thông tin người dùng hợp lệ để tầng Api phát hành JWT.</returns>
     Task<AuthenticatedUser> ValidateCredentialsAsync(AuthenticateModel input);
     /// <summary>
+    /// Đăng nhập bằng Google: kiểm tra token với Google, dùng tài khoản đã liên kết với Google hoặc cùng email (liên kết luôn);
+    /// chưa có thì tạo tài khoản Khách hàng mới chưa có mật khẩu.
+    /// </summary>
+    Task<AuthenticatedUser> AuthenticateWithGoogleAsync(GoogleLoginInput input);
+    /// <summary>
     /// UC Quên mật khẩu: gửi email chứa link đặt lại mật khẩu. Luôn kết thúc "thành công" dù email có tồn tại
     /// hay không, để không ai dò được email nào đã đăng ký.
     /// </summary>
@@ -157,11 +172,13 @@ public class AccountAppService : IAccountAppService
     private readonly IEmailSender _emailSender;
     private readonly AppUrlOptions _urls;
     private readonly ILogger<AccountAppService> _logger;
+    private readonly IRealtimeNotifier _notifier;
+    private readonly IGoogleTokenValidator _google;
 
     public AccountAppService(IRepository<User, long> userRepository, IRepository<Role, int> roleRepository,
         IRepository<PasswordResetToken, long> resetTokenRepository, IUnitOfWork unitOfWork,
         IPasswordHasher<User> passwordHasher, IEmailSender emailSender, IOptions<AppUrlOptions> urls,
-        ILogger<AccountAppService> logger)
+        ILogger<AccountAppService> logger, IRealtimeNotifier notifier, IGoogleTokenValidator google)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
@@ -171,6 +188,8 @@ public class AccountAppService : IAccountAppService
         _emailSender = emailSender;
         _urls = urls.Value;
         _logger = logger;
+        _notifier = notifier;
+        _google = google;
     }
 
     public async Task<RegisterOutput> RegisterAsync(RegisterInput input)
@@ -211,16 +230,81 @@ public class AccountAppService : IAccountAppService
             .FirstOrDefaultAsync(u => u.UserName == login || u.EmailAddress == login.ToLower());
 
         // Cùng một thông báo cho sai tên đăng nhập và sai mật khẩu để không lộ tài khoản nào tồn tại.
-        if (user == null ||
+        // Tài khoản tạo bằng Google chưa có mật khẩu → cũng báo sai như vậy.
+        if (user == null || !user.HasPassword ||
             _passwordHasher.VerifyHashedPassword(user, user.Password, input.Password) == PasswordVerificationResult.Failed)
             throw new UserFriendlyException("Tên đăng nhập hoặc mật khẩu không chính xác.");
 
         if (!user.IsActive)
             throw new UserFriendlyException("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ cửa hàng.");
 
-        return new AuthenticatedUser(user.Id, user.UserName, user.Name,
-            user.Roles.Where(r => r.Role != null).Select(r => r.Role.Name).ToList(), user.SecurityStamp);
+        return ToAuthenticatedUser(user);
     }
+
+    public async Task<AuthenticatedUser> AuthenticateWithGoogleAsync(GoogleLoginInput input)
+    {
+        if (!_google.IsEnabled)
+            throw new UserFriendlyException("Cửa hàng chưa bật đăng nhập bằng Google.");
+
+        var google = await _google.ValidateAsync(input.AccessToken)
+                     ?? throw new UserFriendlyException("Không xác thực được tài khoản Google. Vui lòng thử lại.");
+        // Chỉ tin email Google đã xác minh; nếu không, ai cũng có thể dùng email của người khác để vào tài khoản.
+        if (!google.EmailVerified || string.IsNullOrWhiteSpace(google.Email))
+            throw new UserFriendlyException("Email của tài khoản Google này chưa được xác minh.");
+
+        var email = google.Email.Trim().ToLowerInvariant();
+        var users = _userRepository.GetAll().Include(u => u.Roles).ThenInclude(r => r.Role);
+        // Ưu tiên tài khoản đã liên kết với Google này; chưa có thì tìm tài khoản đăng ký bằng cùng email.
+        var user = await users.FirstOrDefaultAsync(u => u.GoogleId == google.Subject)
+                   ?? await users.FirstOrDefaultAsync(u => u.EmailAddress == email);
+
+        if (user == null)
+            return await CreateGoogleCustomerAsync(google, email);
+
+        if (user.Roles.Any(r => r.Role?.Name is nameof(RoleName.Admin) or nameof(RoleName.Staff)))
+            throw new UserFriendlyException("Tài khoản Nhân viên / Quản trị viên vui lòng đăng nhập bằng mật khẩu tại trang quản trị.");
+        if (!user.IsActive)
+            throw new UserFriendlyException("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ cửa hàng.");
+
+        if (user.GoogleId == null)
+        {
+            // Lần đầu dùng Google với tài khoản đăng ký bằng email: liên kết luôn, lần sau tìm theo mã Google.
+            user.GoogleId = google.Subject;
+            await _unitOfWork.SaveChangesAsync();
+        }
+        else if (user.GoogleId != google.Subject)
+            throw new UserFriendlyException("Email này đã được liên kết với một tài khoản Google khác.");
+
+        return ToAuthenticatedUser(user);
+    }
+
+    /// <summary>Tạo tài khoản Khách hàng từ thông tin Google: chưa có mật khẩu và số điện thoại (khách bổ sung sau).</summary>
+    private async Task<AuthenticatedUser> CreateGoogleCustomerAsync(GoogleUserInfo google, string email)
+    {
+        var customerRole = await _roleRepository.GetAll().SingleAsync(r => r.Name == nameof(RoleName.Customer));
+        var name = string.IsNullOrWhiteSpace(google.Name) ? email.Split('@')[0] : google.Name.Trim();
+
+        var user = new User
+        {
+            Name = name.Length > 64 ? name[..64] : name,
+            EmailAddress = email,
+            // Tên đăng nhập là email như khi tự đăng ký; email đó đã là tên đăng nhập của người khác (hiếm) thì dùng mã Google.
+            UserName = await _userRepository.GetAll().AnyAsync(u => u.UserName == email) ? $"google_{google.Subject}" : email,
+            Password = "", // muốn đăng nhập bằng mật khẩu thì tạo qua Quên mật khẩu (link gửi về email Google)
+            GoogleId = google.Subject,
+            IsActive = true
+        };
+        user.Roles.Add(new UserRole { RoleId = customerRole.Id });
+
+        await _userRepository.InsertAsync(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        return new AuthenticatedUser(user.Id, user.UserName, user.Name, new[] { customerRole.Name }, user.SecurityStamp);
+    }
+
+    private static AuthenticatedUser ToAuthenticatedUser(User user) =>
+        new(user.Id, user.UserName, user.Name,
+            user.Roles.Where(r => r.Role != null).Select(r => r.Role.Name).ToList(), user.SecurityStamp);
 
     public async Task ForgotPasswordAsync(ForgotPasswordInput input)
     {
@@ -298,6 +382,7 @@ public class AccountAppService : IAccountAppService
             other.Revoke(now);
 
         await _unitOfWork.SaveChangesAsync();
+        await _notifier.SessionRevokedAsync(user.Id, SessionRevokedReason.PasswordReset); // các tab / thiết bị đang mở đăng xuất ngay
     }
 
     private static string BuildResetEmail(string name, string link)
