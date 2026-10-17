@@ -47,6 +47,12 @@ services:
         sync: false
       - key: Cloudinary__Url
         sync: false
+      - key: Email__Provider
+        value: Brevo
+      - key: Email__BrevoApiKey
+        sync: false
+      - key: Email__FromAddress
+        sync: false
       - key: Cloudinary__Folder
         value: hornviet-staging
 
@@ -91,6 +97,12 @@ services:
       - key: Google__ClientId
         sync: false
       - key: Cloudinary__Url
+        sync: false
+      - key: Email__Provider
+        value: Brevo
+      - key: Email__BrevoApiKey
+        sync: false
+      - key: Email__FromAddress
         sync: false
       - key: Cloudinary__Folder
         value: hornviet

@@ -51,7 +51,13 @@ public static class DependencyInjectionRegister
     public static IServiceCollection AddEmail(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<SmtpOptions>(configuration.GetSection("Smtp"));
-        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.Configure<EmailOptions>(configuration.GetSection("Email"));
+        // Email:Provider = Brevo → gửi qua HTTPS (chạy được trên Render gói miễn phí, vốn chặn cổng SMTP);
+        // mặc định gửi qua SMTP, và lưu thành file .eml khi chưa cấu hình Smtp:Host (máy phát triển).
+        if (string.Equals(configuration["Email:Provider"], "Brevo", StringComparison.OrdinalIgnoreCase))
+            services.AddHttpClient<IEmailSender, BrevoEmailSender>(http => http.Timeout = TimeSpan.FromSeconds(15));
+        else
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
         return services;
     }
 

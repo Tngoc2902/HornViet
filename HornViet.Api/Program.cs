@@ -109,10 +109,13 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // Cảnh báo sớm khi cấu hình gửi email (UC Quên mật khẩu) chưa đủ — thay vì chỉ thấy lỗi khi người dùng không nhận được mail.
+var emailOptions = app.Services.GetRequiredService<IOptions<EmailOptions>>().Value;
 var smtp = app.Services.GetRequiredService<IOptions<SmtpOptions>>().Value;
-foreach (var problem in smtp.GetConfigurationProblems())
+foreach (var problem in emailOptions.GetConfigurationProblems().Concat(smtp.GetConfigurationProblems()))
     app.Logger.LogWarning("Cấu hình email: {Problem}", problem);
-if (!smtp.SendsRealEmail)
+if (emailOptions.UsesBrevo)
+    app.Logger.LogInformation("Gửi email qua Brevo (người gửi {From})", emailOptions.FromAddress);
+else if (!smtp.SendsRealEmail)
     app.Logger.LogInformation("Smtp:Host trống — email Quên mật khẩu được lưu thành file .eml trong {Directory}",
         Path.GetFullPath(smtp.PickupDirectory));
 
