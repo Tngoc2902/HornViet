@@ -148,6 +148,8 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>(NotificationHub.Path);
 app.MapHealthChecks("/health");
+// Trang gốc: mở địa chỉ backend trên trình duyệt thấy thông tin API thay vì lỗi 404 (backend không có giao diện).
+app.MapGet("/", () => Results.Ok(new { service = "Hồn Sừng Việt API", environment = app.Environment.EnvironmentName, health = "/health" }));
 
 app.Run();
 
