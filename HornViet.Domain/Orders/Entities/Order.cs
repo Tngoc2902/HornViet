@@ -22,9 +22,15 @@ public class Order : Entity<int>, IHasCreationTime
     /// <summary>Phí vận chuyển khách trả (đồng). TotalAmount vẫn là tiền hàng nên thống kê doanh thu / lợi nhuận không đổi.</summary>
     public decimal ShippingFee { get; private set; }
 
-    /// <summary>Mã quận / huyện và phường / xã (của GHN) của địa chỉ nhận; null khi đơn tạo lúc chưa bật vận chuyển.</summary>
-    public int? ToDistrictId { get; private set; }
+    /// <summary>Mã tỉnh / thành và phường / xã (danh mục mới 2 cấp của GHN) của địa chỉ nhận; null khi đơn tạo lúc chưa bật vận chuyển.</summary>
+    public int? ToProvinceId { get; private set; }
     public string? ToWardCode { get; private set; }
+
+    /// <summary>Số nhà, tên đường khách nhập (ShippingAddress là bản đầy đủ đã ghép phường / tỉnh).</summary>
+    public string? ToStreet { get; private set; }
+
+    /// <summary>Mã quận / huyện theo địa chỉ cũ 3 cấp — chỉ còn ở đơn đặt trước khi chuyển sang địa chỉ mới.</summary>
+    public int? ToDistrictId { get; private set; }
 
     /// <summary>Mã vận đơn GHN (order_code); null = chưa tạo vận đơn.</summary>
     public string? GhnOrderCode { get; private set; }
@@ -60,12 +66,14 @@ public class Order : Entity<int>, IHasCreationTime
     /// <summary>Mã đơn hiển thị cho khách, VD: HSV000123.</summary>
     public static string FormatCode(int id) => $"HSV{id:D6}";
 
-    /// <summary>Ghi địa chỉ nhận (mã quận / phường của GHN) và phí vận chuyển đã được server tính.</summary>
-    public void SetShipping(decimal fee, int districtId, string wardCode)
+    /// <summary>Ghi địa chỉ nhận (mã tỉnh / phường của GHN, số nhà) và phí vận chuyển đã được server tính.</summary>
+    public void SetShipping(decimal fee, int provinceId, string wardCode, string street)
     {
         ShippingFee = fee;
-        ToDistrictId = districtId;
+        ToProvinceId = provinceId;
         ToWardCode = wardCode;
+        ToStreet = street;
+        ToDistrictId = null;
     }
 
     /// <summary>Lưu vận đơn vừa tạo trên GHN.</summary>

@@ -12,9 +12,11 @@ public interface IShippingProvider
     /// <summary>Cân nặng mặc định của một sản phẩm (gam) khi sản phẩm chưa khai báo cân nặng riêng.</summary>
     int DefaultItemWeightGrams { get; }
 
+    /// <summary>Tỉnh / thành theo đơn vị hành chính mới 2 cấp (sau sáp nhập 01/07/2025).</summary>
     Task<IReadOnlyList<ShippingProvince>> GetProvincesAsync(CancellationToken ct = default);
-    Task<IReadOnlyList<ShippingDistrict>> GetDistrictsAsync(int provinceId, CancellationToken ct = default);
-    Task<IReadOnlyList<ShippingWard>> GetWardsAsync(int districtId, CancellationToken ct = default);
+
+    /// <summary>Phường / xã (mới, không còn cấp quận / huyện) của một tỉnh / thành.</summary>
+    Task<IReadOnlyList<ShippingWard>> GetWardsAsync(int provinceId, CancellationToken ct = default);
 
     /// <summary>Phí vận chuyển (đồng) từ kho của shop tới địa chỉ nhận.</summary>
     Task<ShippingFee> CalculateFeeAsync(ShippingFeeRequest request, CancellationToken ct = default);
@@ -34,24 +36,23 @@ public interface IShippingProvider
 
 public record ShippingProvince(int Id, string Name);
 
-public record ShippingDistrict(int Id, int ProvinceId, string Name);
+public record ShippingWard(string Code, int ProvinceId, string Name);
 
-public record ShippingWard(string Code, int DistrictId, string Name);
-
-/// <param name="ToDistrictId">Mã quận / huyện người nhận (GHN DistrictID).</param>
-/// <param name="ToWardCode">Mã phường / xã người nhận (GHN WardCode).</param>
+/// <param name="ToProvinceName">Tên tỉnh / thành chuẩn (lấy từ danh mục mới).</param>
+/// <param name="ToWardName">Tên phường / xã chuẩn (lấy từ danh mục mới).</param>
 /// <param name="WeightGrams">Tổng cân nặng (gam).</param>
 /// <param name="InsuranceValue">Giá trị khai báo bảo hiểm (đồng) — tiền hàng của đơn.</param>
-public record ShippingFeeRequest(int ToDistrictId, string ToWardCode, int WeightGrams, decimal InsuranceValue);
+public record ShippingFeeRequest(string ToProvinceName, string ToWardName, int WeightGrams, decimal InsuranceValue);
 
 /// <param name="Total">Tổng phí vận chuyển (đồng), đã gồm phí bảo hiểm.</param>
 public record ShippingFee(decimal Total);
 
 /// <param name="ClientOrderCode">Mã đơn của hệ thống (HSV000123), duy nhất trong shop.</param>
+/// <param name="ToAddress">Số nhà, tên đường (không gồm phường / tỉnh — gửi riêng ở ToWardName / ToProvinceName).</param>
 /// <param name="CodAmount">Số tiền thu hộ (đồng); 0 nếu khách đã thanh toán.</param>
 /// <param name="InsuranceValue">Giá trị khai báo bảo hiểm (đồng).</param>
-public record ShipmentRequest(string ClientOrderCode, string ToName, string ToPhone, string ToAddress, int ToDistrictId,
-    string ToWardCode, decimal CodAmount, decimal InsuranceValue, int WeightGrams, string Content, string? Note,
+public record ShipmentRequest(string ClientOrderCode, string ToName, string ToPhone, string ToAddress, string ToProvinceName,
+    string ToWardName, decimal CodAmount, decimal InsuranceValue, int WeightGrams, string Content, string? Note,
     IReadOnlyList<ShipmentItem> Items);
 
 public record ShipmentItem(string Name, int Quantity, decimal Price, int WeightGrams);

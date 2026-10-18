@@ -28,9 +28,8 @@ public class CreateOrderInput
     [Required(ErrorMessage = "Vui lòng nhập địa chỉ nhận hàng."), StringLength(300)]
     public string ShippingAddress { get; set; } = null!;
 
-    /// <summary>Tỉnh / quận / phường theo danh mục của đơn vị vận chuyển — bắt buộc khi đã bật vận chuyển.</summary>
+    /// <summary>Tỉnh / thành và phường / xã (danh mục mới 2 cấp của đơn vị vận chuyển) — bắt buộc khi đã bật vận chuyển.</summary>
     public int? ToProvinceId { get; set; }
-    public int? ToDistrictId { get; set; }
     public string? ToWardCode { get; set; }
 
     [EnumDataType(typeof(PaymentMethod), ErrorMessage = "Phương thức thanh toán không hợp lệ.")]
@@ -216,23 +215,24 @@ public class OrderAppService : IOrderAppService
             throw new UserFriendlyException("Một số sản phẩm trong giỏ không đủ hàng, vui lòng cập nhật lại giỏ.",
                 string.Join("\n", problems));
 
-        var address = input.ShippingAddress.Trim();
+        var street = input.ShippingAddress.Trim();
+        var address = street;
         ShippingQuote? quote = null;
         if (_shipping.IsEnabled)
         {
-            if (input.ToProvinceId is not > 0 || input.ToDistrictId is not > 0 || string.IsNullOrWhiteSpace(input.ToWardCode))
-                throw new UserFriendlyException("Vui lòng chọn tỉnh / thành phố, quận / huyện và phường / xã nhận hàng.");
+            if (input.ToProvinceId is not > 0 || string.IsNullOrWhiteSpace(input.ToWardCode))
+                throw new UserFriendlyException("Vui lòng chọn tỉnh / thành phố và phường / xã nhận hàng.");
 
             // Phí ship luôn do server tính lại — không nhận số tiền từ frontend.
-            quote = await _shipping.QuoteAsync(input.ToProvinceId.Value, input.ToDistrictId.Value, input.ToWardCode!,
+            quote = await _shipping.QuoteAsync(input.ToProvinceId.Value, input.ToWardCode!,
                 cartItems.Sum(ci => ci.Quantity), cartItems.Sum(ci => ci.ProductVariant.Product.Price * ci.Quantity));
-            address = $"{address}, {quote.WardName}, {quote.DistrictName}, {quote.ProvinceName}";
+            address = $"{street}, {quote.WardName}, {quote.ProvinceName}";
         }
 
         var order = new Order(userId, input.ReceiverName.Trim(), input.PhoneNumber.Trim(),
             address, input.PaymentMethod, input.Note?.Trim());
         if (quote != null)
-            order.SetShipping(quote.Fee, input.ToDistrictId!.Value, input.ToWardCode!.Trim());
+            order.SetShipping(quote.Fee, input.ToProvinceId!.Value, input.ToWardCode!.Trim(), street);
 
         foreach (var item in cartItems)
         {

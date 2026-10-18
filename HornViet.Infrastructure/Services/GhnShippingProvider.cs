@@ -68,55 +68,56 @@ public class GhnShippingProvider : IShippingProvider
 
     public int DefaultItemWeightGrams => _options.DefaultItemWeightGrams;
 
+    // Tài khoản GHN tạo sau 22/09/2026 chỉ nhận địa chỉ mới 2 cấp (Tỉnh → Phường/Xã), nên dùng danh mục v3 và gửi tên chuẩn
+    // kèm is_new_to_address = true; mã quận / phường cũ bị GHN từ chối.
     public Task<IReadOnlyList<ShippingProvince>> GetProvincesAsync(CancellationToken ct = default) =>
-        Cached("provinces", async () =>
+        Cached("v3:provinces", async () =>
         {
-            var data = await SendAsync(HttpMethod.Get, "/shiip/public-api/master-data/province", null, ct);
+            var data = await SendAsync(HttpMethod.Get, "/shiip/public-api/v3/master-data/province/all?offset=0&limit=200", null, ct);
             return (IReadOnlyList<ShippingProvince>)data.EnumerateArray()
-                .Where(IsUsable)
-                .Where(p => !p.GetProperty("ProvinceName").GetString()!.StartsWith("Test", StringComparison.OrdinalIgnoreCase))
-                .Select(p => new ShippingProvince(p.GetProperty("ProvinceID").GetInt32(), p.GetProperty("ProvinceName").GetString()!))
+                .Where(IsActive)
+                .Select(p => new ShippingProvince(p.GetProperty("_id").GetInt32(), p.GetProperty("name").GetString()!))
+                .Where(p => !p.Name.StartsWith("Test", StringComparison.OrdinalIgnoreCase))
                 .ToList();
         });
 
-    public Task<IReadOnlyList<ShippingDistrict>> GetDistrictsAsync(int provinceId, CancellationToken ct = default) =>
-        Cached($"districts:{provinceId}", async () =>
+    public Task<IReadOnlyList<ShippingWard>> GetWardsAsync(int provinceId, CancellationToken ct = default) =>
+        Cached($"v3:wards:{provinceId}", async () =>
         {
-            var data = await SendAsync(HttpMethod.Post, "/shiip/public-api/master-data/district", new { province_id = provinceId }, ct);
-            return (IReadOnlyList<ShippingDistrict>)data.EnumerateArray()
-                .Where(IsUsable)
-                .Select(d => new ShippingDistrict(d.GetProperty("DistrictID").GetInt32(), provinceId, d.GetProperty("DistrictName").GetString()!))
-                .ToList();
-        });
-
-    public Task<IReadOnlyList<ShippingWard>> GetWardsAsync(int districtId, CancellationToken ct = default) =>
-        Cached($"wards:{districtId}", async () =>
-        {
-            var data = await SendAsync(HttpMethod.Post, "/shiip/public-api/master-data/ward", new { district_id = districtId }, ct);
-            // WardCode do GHN trả về dạng chuỗi (hoặc số ở một số bản) — luôn đọc về chuỗi.
-            return (IReadOnlyList<ShippingWard>)data.EnumerateArray()
-                .Where(IsUsable)
-                .Select(w => new ShippingWard(
-                    w.GetProperty("WardCode").ValueKind == JsonValueKind.String ? w.GetProperty("WardCode").GetString()! : w.GetProperty("WardCode").GetRawText(),
-                    districtId,
-                    w.GetProperty("WardName").GetString()!))
+            // province_id sai thì GHN trả data = null (không báo lỗi) → coi như danh sách rỗng.
+            var data = await SendAsync(HttpMethod.Get, $"/shiip/public-api/v3/master-data/ward/all-by-province-id?province_id={provinceId}&offset=0&limit=200", null, ct);
+            if (data.ValueKind != JsonValueKind.Array)
+                return (IReadOnlyList<ShippingWard>)[];
+            return data.EnumerateArray()
+                .Where(IsActive)
+                .Select(w => new ShippingWard(w.GetProperty("_id").GetInt32().ToString(), provinceId, w.GetProperty("name").GetString()!))
+                .Where(w => !w.Name.StartsWith("Test", StringComparison.OrdinalIgnoreCase))
                 .ToList();
         });
 
     public async Task<ShippingFee> CalculateFeeAsync(ShippingFeeRequest request, CancellationToken ct = default)
     {
-        var data = await SendAsync(HttpMethod.Post, "/shiip/public-api/v2/shipping-order/fee", new
+        // API tính phí chưa nhận địa chỉ mới 2 cấp → dùng "xem trước đơn" (preview), tính đúng như lúc tạo vận đơn thật.
+        // Tên / SĐT chỉ để qua kiểm tra bắt buộc của GHN, không lưu ở đâu.
+        var data = await SendAsync(HttpMethod.Post, "/shiip/public-api/v2/shipping-order/preview", new
         {
+            payment_type_id = 1,
+            required_note = _options.RequiredNote,
+            to_name = "Khach hang",
+            to_phone = "0900000000",
+            to_address = request.ToWardName,
+            to_ward_name = request.ToWardName,
+            to_province_name = request.ToProvinceName,
+            is_new_to_address = true,
             service_type_id = 2, // giao hàng nhẹ, dưới 20 kg
-            to_district_id = request.ToDistrictId,
-            to_ward_code = request.ToWardCode,
             weight = request.WeightGrams,
             length = _options.DefaultLengthCm,
             width = _options.DefaultWidthCm,
             height = _options.DefaultHeightCm,
-            insurance_value = (int)Math.Min(request.InsuranceValue, 5_000_000m) // GHN chỉ bảo hiểm tối đa 5 triệu
+            insurance_value = (int)Math.Min(request.InsuranceValue, 5_000_000m), // GHN chỉ bảo hiểm tối đa 5 triệu
+            items = new[] { new { name = "Hang hoa", quantity = 1, weight = request.WeightGrams } } // preview bắt buộc có tên hàng
         }, ct);
-        return new ShippingFee(data.GetProperty("total").GetDecimal());
+        return new ShippingFee(data.GetProperty("total_fee").GetDecimal());
     }
 
     public async Task<ShipmentCreated> CreateShipmentAsync(ShipmentRequest request, CancellationToken ct = default)
@@ -132,8 +133,9 @@ public class GhnShippingProvider : IShippingProvider
             to_name = request.ToName,
             to_phone = request.ToPhone,
             to_address = request.ToAddress,
-            to_ward_code = request.ToWardCode,
-            to_district_id = request.ToDistrictId,
+            to_ward_name = request.ToWardName,
+            to_province_name = request.ToProvinceName,
+            is_new_to_address = true,
             cod_amount = (int)request.CodAmount,
             content = request.Content,
             note = request.Note,
@@ -185,10 +187,9 @@ public class GhnShippingProvider : IShippingProvider
     private static DateTime? ParseTime(string? value) =>
         DateTimeOffset.TryParse(value, out var t) ? t.LocalDateTime : null;
 
-    // Mục master-data có thể bị GHN tắt (IsEnable / Status = 0): không đưa cho khách chọn.
-    private static bool IsUsable(JsonElement e) =>
-        !(e.TryGetProperty("IsEnable", out var enabled) && enabled.ValueKind == JsonValueKind.Number && enabled.GetInt32() == 0) &&
-        !(e.TryGetProperty("Status", out var status) && status.ValueKind == JsonValueKind.Number && status.GetInt32() == 0);
+    // Danh mục mới: status 1 = đang dùng, 2 = ngưng, 10 = đã xóa — chỉ đưa mục đang dùng cho khách chọn.
+    private static bool IsActive(JsonElement e) =>
+        !e.TryGetProperty("status", out var status) || status.ValueKind != JsonValueKind.Number || status.GetInt32() == 1;
 
     private async Task<T> Cached<T>(string key, Func<Task<T>> load)
     {

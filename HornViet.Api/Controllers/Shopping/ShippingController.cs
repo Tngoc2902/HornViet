@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace HornViet.Api.Controllers.Shopping;
 
 /// <summary>
-/// Giao hàng: danh mục Tỉnh / Quận / Phường (công khai, dữ liệu của đơn vị vận chuyển) và tính phí ship (cần đăng nhập vì
+/// Giao hàng: danh mục Tỉnh / Phường (công khai, dữ liệu của đơn vị vận chuyển) và tính phí ship (cần đăng nhập vì
 /// tính theo giỏ hàng). Token của đơn vị vận chuyển chỉ nằm ở backend, frontend không bao giờ thấy.
 /// </summary>
 public class ShippingController : HornVietBaseController
@@ -21,13 +21,10 @@ public class ShippingController : HornVietBaseController
     [HttpGet]
     public Task<ActionResult<IReadOnlyList<ProvinceDto>>> GetProvinces() => Run(() => _service.GetProvincesAsync());
 
+    /// <summary>Phường / xã của một tỉnh / thành (địa chỉ mới 2 cấp, không còn quận / huyện).</summary>
     [HttpGet]
-    public Task<ActionResult<IReadOnlyList<DistrictDto>>> GetDistricts([FromQuery] int provinceId) =>
-        Run(() => _service.GetDistrictsAsync(provinceId));
-
-    [HttpGet]
-    public Task<ActionResult<IReadOnlyList<WardDto>>> GetWards([FromQuery] int districtId) =>
-        Run(() => _service.GetWardsAsync(districtId));
+    public Task<ActionResult<IReadOnlyList<WardDto>>> GetWards([FromQuery] int provinceId) =>
+        Run(() => _service.GetWardsAsync(provinceId));
 
     /// <summary>Phí ship cho giỏ hàng của người dùng hiện tại tới địa chỉ đã chọn.</summary>
     [Authorize]
