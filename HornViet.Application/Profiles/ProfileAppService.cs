@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using HornViet.Application.Accounts;
 using HornViet.Application.Common;
+using HornViet.Application.Shipping;
 using HornViet.Domain;
 using HornViet.Domain.Interfaces.Repositories;
 using HornViet.Domain.SharedKernel;
@@ -47,6 +48,14 @@ public class AddressDto
     public string PhoneNumber { get; set; } = null!;
     public string Address { get; set; } = null!;
     public bool IsDefault { get; set; }
+
+    /// <summary>Mã tỉnh / phường và số nhà — dùng để đặt hàng có giao hàng nhanh; null ở địa chỉ cũ.</summary>
+    public int? ProvinceId { get; set; }
+    public string? WardCode { get; set; }
+    public string? Street { get; set; }
+
+    /// <summary>Đã bật giao hàng nhanh mà địa chỉ chưa có tỉnh / phường: khách cần sửa lại trước khi dùng để đặt hàng.</summary>
+    public bool NeedsUpdate { get; set; }
 }
 
 public class CreateOrUpdateAddressInput
@@ -61,8 +70,13 @@ public class CreateOrUpdateAddressInput
     [RegularExpression(AppConsts.PhoneRegex, ErrorMessage = "Số điện thoại không hợp lệ.")]
     public string PhoneNumber { get; set; } = null!;
 
-    [Required(ErrorMessage = "Vui lòng nhập địa chỉ."), StringLength(500)]
+    /// <summary>Khi bật giao hàng nhanh: số nhà, tên đường (server ghép thêm phường / tỉnh). Khi tắt: địa chỉ đầy đủ.</summary>
+    [Required(ErrorMessage = "Vui lòng nhập địa chỉ."), StringLength(300)]
     public string Address { get; set; } = null!;
+
+    /// <summary>Tỉnh / phường (danh mục mới 2 cấp) — bắt buộc khi đã bật giao hàng nhanh.</summary>
+    public int? ProvinceId { get; set; }
+    public string? WardCode { get; set; }
 
     public bool IsDefault { get; set; }
 }
@@ -85,10 +99,13 @@ public class ProfileAppService : IProfileAppService
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IAppSession _session;
     private readonly IRealtimeNotifier _notifier;
+    private readonly IShippingAppService _shipping;
 
     public ProfileAppService(IRepository<User, long> userRepository, IRepository<UserAddress, int> addressRepository,
-        IUnitOfWork unitOfWork, IPasswordHasher<User> passwordHasher, IAppSession session, IRealtimeNotifier notifier)
+        IUnitOfWork unitOfWork, IPasswordHasher<User> passwordHasher, IAppSession session, IRealtimeNotifier notifier,
+        IShippingAppService shipping)
     {
+        _shipping = shipping;
         _userRepository = userRepository;
         _addressRepository = addressRepository;
         _unitOfWork = unitOfWork;
@@ -131,13 +148,8 @@ public class ProfileAppService : IProfileAppService
         var items = await _addressRepository.GetAll()
             .Where(a => a.UserId == userId)
             .OrderByDescending(a => a.IsDefault).ThenByDescending(a => a.CreationTime)
-            .Select(a => new AddressDto
-            {
-                Id = a.Id, ReceiverName = a.ReceiverName, PhoneNumber = a.PhoneNumber,
-                Address = a.Address, IsDefault = a.IsDefault
-            })
             .ToListAsync();
-        return new ListResultDto<AddressDto>(items);
+        return new ListResultDto<AddressDto>(items.Select(ToDto).ToList());
     }
 
     public async Task<AddressDto> SaveAddressAsync(CreateOrUpdateAddressInput input)
@@ -160,7 +172,25 @@ public class ProfileAppService : IProfileAppService
 
         address.ReceiverName = input.ReceiverName.Trim();
         address.PhoneNumber = input.PhoneNumber.Trim();
-        address.Address = input.Address.Trim();
+        var street = input.Address.Trim();
+        if (_shipping.IsEnabled)
+        {
+            // Lưu kèm mã tỉnh / phường để đặt hàng tính phí và tạo vận đơn được; tên lấy từ danh mục chuẩn.
+            if (input.ProvinceId is not > 0 || string.IsNullOrWhiteSpace(input.WardCode))
+                throw new UserFriendlyException("Vui lòng chọn tỉnh / thành phố và phường / xã.");
+            var (provinceName, wardName) = await _shipping.ResolveNamesAsync(input.ProvinceId.Value, input.WardCode);
+            address.ProvinceId = input.ProvinceId;
+            address.WardCode = input.WardCode.Trim();
+            address.Street = street;
+            address.Address = $"{street}, {wardName}, {provinceName}";
+        }
+        else
+        {
+            address.ProvinceId = null;
+            address.WardCode = null;
+            address.Street = null;
+            address.Address = street;
+        }
 
         // Luôn có đúng một địa chỉ mặc định.
         if (input.IsDefault || myAddresses.All(a => !a.IsDefault || a == address))
@@ -170,12 +200,16 @@ public class ProfileAppService : IProfileAppService
         }
 
         await _unitOfWork.SaveChangesAsync();
-        return new AddressDto
-        {
-            Id = address.Id, ReceiverName = address.ReceiverName, PhoneNumber = address.PhoneNumber,
-            Address = address.Address, IsDefault = address.IsDefault
-        };
+        return ToDto(address);
     }
+
+    private AddressDto ToDto(UserAddress a) => new()
+    {
+        Id = a.Id, ReceiverName = a.ReceiverName, PhoneNumber = a.PhoneNumber,
+        Address = a.Address, IsDefault = a.IsDefault,
+        ProvinceId = a.ProvinceId, WardCode = a.WardCode, Street = a.Street,
+        NeedsUpdate = _shipping.IsEnabled && (a.ProvinceId == null || string.IsNullOrEmpty(a.WardCode))
+    };
 
     public async Task DeleteAddressAsync(int id)
     {

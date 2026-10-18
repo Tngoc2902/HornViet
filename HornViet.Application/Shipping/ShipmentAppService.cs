@@ -37,8 +37,22 @@ public class GhnCallbackInput
     public string? Reason { get; set; }
 }
 
+public class SimulateShipmentInput
+{
+    public int OrderId { get; set; }
+
+    /// <summary>Trạng thái GHN muốn giả lập: picked, delivering, delivered, delivery_fail, returned…</summary>
+    public string Status { get; set; } = null!;
+}
+
 public interface IShipmentAppService
 {
+    /// <summary>
+    /// Chỉ môi trường thử (sandbox không có shipper nên vận đơn đứng mãi ở "Chờ lấy hàng"): áp trạng thái giao hàng như thể
+    /// GHN vừa gửi webhook, để thử trọn luồng đã lấy hàng → đang giao → đã giao / hoàn hàng.
+    /// </summary>
+    Task<ShipmentDto> SimulateAsync(SimulateShipmentInput input);
+
     /// <summary>Tạo vận đơn cho đơn hàng (nhân viên). Đơn "Chờ xử lý" tự chuyển sang "Đang giao".</summary>
     Task<ShipmentDto> CreateAsync(int orderId);
 
@@ -149,6 +163,8 @@ public class ShipmentAppService : IShipmentAppService
         var order = await LoadAsync(orderId);
         if (string.IsNullOrEmpty(order.GhnOrderCode))
             throw new UserFriendlyException("Đơn này chưa có vận đơn.");
+        if (order.Status is not (OrderStatus.Pending or OrderStatus.Shipping))
+            throw new UserFriendlyException("Đơn đã hoàn thành hoặc đã hủy, không hủy vận đơn được.");
 
         await _provider.CancelShipmentAsync(order.GhnOrderCode, $"Hủy vận đơn đơn {Order.FormatCode(order.Id)}");
         order.DetachShipment();
@@ -182,6 +198,28 @@ public class ShipmentAppService : IShipmentAppService
                 _logger.LogWarning("Không làm mới được vận đơn {Code}: {Message}", order.GhnOrderCode, ex.Message);
             }
         }
+        return ToDto(order);
+    }
+
+    private static readonly HashSet<string> SimulatableStatuses =
+        ["picking", "picked", "storing", "transporting", "delivering", "delivered", "delivery_fail", "waiting_to_return", "returning", "returned"];
+
+    public async Task<ShipmentDto> SimulateAsync(SimulateShipmentInput input)
+    {
+        EnsureEnabled();
+        if (!_provider.IsSandbox)
+            throw new UserFriendlyException("Chỉ giả lập được trạng thái giao hàng ở môi trường thử.");
+        var status = input.Status?.Trim().ToLowerInvariant() ?? "";
+        if (!SimulatableStatuses.Contains(status))
+            throw new UserFriendlyException("Trạng thái giả lập không hợp lệ.");
+
+        var order = await LoadAsync(input.OrderId);
+        if (string.IsNullOrEmpty(order.GhnOrderCode))
+            throw new UserFriendlyException("Đơn này chưa có vận đơn.");
+        if (IsFinal(order.GhnStatus))
+            throw new UserFriendlyException("Vận đơn đã kết thúc (đã giao / đã hoàn), không đổi được nữa.");
+
+        await ApplyStatusAsync(order, status, DateTime.Now);
         return ToDto(order);
     }
 

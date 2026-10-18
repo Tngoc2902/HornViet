@@ -66,6 +66,8 @@ public class GhnShippingProvider : IShippingProvider
 
     public bool IsEnabled => _options.IsConfigured;
 
+    public bool IsSandbox => _options.BaseUrl.Contains("dev-online-gateway", StringComparison.OrdinalIgnoreCase);
+
     public int DefaultItemWeightGrams => _options.DefaultItemWeightGrams;
 
     // Tài khoản GHN tạo sau 22/09/2026 chỉ nhận địa chỉ mới 2 cấp (Tỉnh → Phường/Xã), nên dùng danh mục v3 và gửi tên chuẩn

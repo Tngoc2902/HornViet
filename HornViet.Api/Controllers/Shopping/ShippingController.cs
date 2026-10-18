@@ -16,7 +16,7 @@ public class ShippingController : HornVietBaseController
 
     /// <summary>Bật hay tắt tích hợp vận chuyển — frontend quyết định có hiện bộ chọn Tỉnh / Quận / Phường không.</summary>
     [HttpGet]
-    public ActionResult<object> GetStatus() => Ok(new { isEnabled = _service.IsEnabled });
+    public ActionResult<object> GetStatus() => Ok(new { isEnabled = _service.IsEnabled, isSandbox = _service.IsSandbox });
 
     [HttpGet]
     public Task<ActionResult<IReadOnlyList<ProvinceDto>>> GetProvinces() => Run(() => _service.GetProvincesAsync());
