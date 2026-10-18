@@ -201,8 +201,21 @@ public class ShipmentAppService : IShipmentAppService
         return ToDto(order);
     }
 
-    private static readonly HashSet<string> SimulatableStatuses =
-        ["picking", "picked", "storing", "transporting", "delivering", "delivered", "delivery_fail", "waiting_to_return", "returning", "returned"];
+    /// <summary>
+    /// Các bước giả lập, đi lần lượt như vận đơn thật: Chờ lấy hàng → Đang lấy hàng → Đã lấy hàng → Đang luân chuyển →
+    /// Đang giao → Giao thành công; giao thất bại thì giao lại hoặc chờ hoàn → đang hoàn → đã hoàn về shop.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string[]> SimulationSteps = new Dictionary<string, string[]>
+    {
+        ["ready_to_pick"] = ["picking"],
+        ["picking"] = ["picked"],
+        ["picked"] = ["transporting"],
+        ["transporting"] = ["delivering"],
+        ["delivering"] = ["delivered", "delivery_fail"],
+        ["delivery_fail"] = ["delivering", "waiting_to_return"],
+        ["waiting_to_return"] = ["returning"],
+        ["returning"] = ["returned"],
+    };
 
     public async Task<ShipmentDto> SimulateAsync(SimulateShipmentInput input)
     {
@@ -210,14 +223,16 @@ public class ShipmentAppService : IShipmentAppService
         if (!_provider.IsSandbox)
             throw new UserFriendlyException("Chỉ giả lập được trạng thái giao hàng ở môi trường thử.");
         var status = input.Status?.Trim().ToLowerInvariant() ?? "";
-        if (!SimulatableStatuses.Contains(status))
-            throw new UserFriendlyException("Trạng thái giả lập không hợp lệ.");
 
         var order = await LoadAsync(input.OrderId);
         if (string.IsNullOrEmpty(order.GhnOrderCode))
             throw new UserFriendlyException("Đơn này chưa có vận đơn.");
         if (IsFinal(order.GhnStatus))
             throw new UserFriendlyException("Vận đơn đã kết thúc (đã giao / đã hoàn), không đổi được nữa.");
+        if (order.Status is not (OrderStatus.Pending or OrderStatus.Shipping))
+            throw new UserFriendlyException("Đơn đã hoàn thành hoặc đã hủy, không giả lập được.");
+        if (!SimulationSteps.TryGetValue(order.GhnStatus ?? "", out var next) || !next.Contains(status))
+            throw new UserFriendlyException("Phải giả lập lần lượt từng bước của vận đơn, không được nhảy bước.");
 
         await ApplyStatusAsync(order, status, DateTime.Now);
         return ToDto(order);
@@ -249,6 +264,8 @@ public class ShipmentAppService : IShipmentAppService
     {
         if (IsFinal(order.GhnStatus))
             return; // đã giao / đã hoàn: không nhận thêm cập nhật
+        if (IsRegression(order.GhnStatus, ghnStatus))
+            return; // làm mới / webhook đến trễ mang trạng thái cũ hơn: không kéo lùi tiến trình
 
         var changed = order.UpdateShipmentStatus(ghnStatus, time);
         if (!changed)
@@ -282,6 +299,31 @@ public class ShipmentAppService : IShipmentAppService
     private static readonly HashSet<string> PickedUp = ["picked", "storing", "sorting", "transporting", "delivering"];
 
     private static bool IsFinal(string? status) => status is "delivered" or "returned";
+
+    // Thứ tự tiến trình giao hàng của GHN; trạng thái bất thường (cancel, lost, damage, exception) không có thứ tự → luôn nhận.
+    private static int? Rank(string? status) => status switch
+    {
+        "ready_to_pick" => 0,
+        "picking" or "money_collect_picking" => 1,
+        "picked" => 2,
+        "storing" or "sorting" => 3,
+        "transporting" => 4,
+        "delivering" or "money_collect_delivering" => 5,
+        "delivery_fail" => 6,
+        "waiting_to_return" => 7,
+        "return" or "return_transporting" or "return_sorting" or "returning" => 8,
+        "return_fail" => 9,
+        "delivered" or "returned" => 10,
+        _ => null
+    };
+
+    private static bool IsRegression(string? current, string incoming)
+    {
+        if (Rank(current) is not { } from || Rank(incoming) is not { } to || to >= from)
+            return false;
+        // Giao thất bại rồi GHN đưa hàng về kho để giao lại: lùi hợp lệ.
+        return !(current == "delivery_fail" && to is >= 3 and <= 5);
+    }
 
     private void EnsureEnabled()
     {
