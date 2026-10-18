@@ -31,6 +31,10 @@ public class SignalRNotifier : IRealtimeNotifier
         _hub.Clients.Groups(NotificationHub.UserGroup(e.UserId), NotificationHub.ManagementGroup)
             .OrderStatusChanged(new OrderStatusChangedMessage(e.OrderId, e.Code, (int)e.Status)));
 
+    public Task ShipmentChangedAsync(ShipmentChangedEvent e) => SafeAsync(nameof(ShipmentChangedAsync), () =>
+        _hub.Clients.Groups(NotificationHub.UserGroup(e.UserId), NotificationHub.ManagementGroup)
+            .ShipmentChanged(new ShipmentChangedMessage(e.OrderId, e.Code, e.GhnStatus)));
+
     public Task StockChangedAsync(IReadOnlyCollection<StockChange> changes, bool alertLowStock = false) =>
         SafeAsync(nameof(StockChangedAsync), async () =>
         {

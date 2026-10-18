@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using HornViet.Application.Common;
+using HornViet.Application.Shipping;
 using HornViet.Domain;
 using HornViet.Domain.Carts.Entities;
 using HornViet.Domain.Catalog.Entities;
@@ -21,8 +22,16 @@ public class CreateOrderInput
     [RegularExpression(AppConsts.PhoneRegex, ErrorMessage = "Số điện thoại không hợp lệ.")]
     public string PhoneNumber { get; set; } = null!;
 
-    [Required(ErrorMessage = "Vui lòng nhập địa chỉ nhận hàng."), StringLength(500)]
+    /// <summary>
+    /// Số nhà, tên đường. Khi bật vận chuyển, server ghép thêm phường / quận / tỉnh (tên chuẩn của đơn vị vận chuyển) để thành địa chỉ đầy đủ.
+    /// </summary>
+    [Required(ErrorMessage = "Vui lòng nhập địa chỉ nhận hàng."), StringLength(300)]
     public string ShippingAddress { get; set; } = null!;
+
+    /// <summary>Tỉnh / quận / phường theo danh mục của đơn vị vận chuyển — bắt buộc khi đã bật vận chuyển.</summary>
+    public int? ToProvinceId { get; set; }
+    public int? ToDistrictId { get; set; }
+    public string? ToWardCode { get; set; }
 
     [EnumDataType(typeof(PaymentMethod), ErrorMessage = "Phương thức thanh toán không hợp lệ.")]
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.COD;
@@ -49,7 +58,13 @@ public class OrderListItemDto
     public DateTime CreationTime { get; set; }
     public OrderStatus Status { get; set; }
     public PaymentMethod PaymentMethod { get; set; }
+    /// <summary>Tiền hàng (chưa gồm phí ship).</summary>
     public decimal TotalAmount { get; set; }
+    public decimal ShippingFee { get; set; }
+    /// <summary>Số khách phải trả = tiền hàng + phí ship.</summary>
+    public decimal PayableAmount { get; set; }
+    public string? GhnOrderCode { get; set; }
+    public string? GhnStatus { get; set; }
     public int ItemCount { get; set; }
     public string ReceiverName { get; set; } = null!;
     public bool CanCancel { get; set; }
@@ -71,7 +86,15 @@ public class OrderDto
     public DateTime CreationTime { get; set; }
     public OrderStatus Status { get; set; }
     public PaymentMethod PaymentMethod { get; set; }
+    /// <summary>Tiền hàng (chưa gồm phí ship).</summary>
     public decimal TotalAmount { get; set; }
+    public decimal ShippingFee { get; set; }
+    /// <summary>Số khách phải trả = tiền hàng + phí ship.</summary>
+    public decimal PayableAmount { get; set; }
+    public string? GhnOrderCode { get; set; }
+    public string? GhnStatus { get; set; }
+    public DateTime? GhnExpectedDeliveryTime { get; set; }
+    public DateTime? GhnStatusTime { get; set; }
     public int ItemCount { get; set; }
     public bool CanCancel { get; set; }
     public string ReceiverName { get; set; } = null!;
@@ -118,6 +141,12 @@ public interface IOrderAppService
     Task<OrderDto> CancelAsync(int id);
     Task<PagedResultDto<OrderListItemDto>> GetAllAsync(GetOrdersInput input);
     Task<OrderDto> UpdateStatusAsync(UpdateOrderStatusInput input);
+
+    /// <summary>
+    /// Hệ thống áp trạng thái đơn theo kết quả giao hàng của đơn vị vận chuyển (giao thành công → Hoàn thành, hoàn hàng về → Hủy
+    /// và hoàn tồn kho). Không kiểm tra quyền người dùng — chỉ gọi từ luồng đã xác thực của hệ thống (webhook / làm mới vận đơn).
+    /// </summary>
+    Task ApplyShipmentStatusAsync(int orderId, OrderStatus newStatus);
 }
 
 public class OrderAppService : IOrderAppService
@@ -130,6 +159,8 @@ public class OrderAppService : IOrderAppService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAppSession _session;
     private readonly IRealtimeNotifier _notifier;
+    private readonly IShippingAppService _shipping;
+    private readonly IShippingProvider _shippingProvider;
 
     public OrderAppService(
         IRepository<Order, int> orderRepository,
@@ -139,7 +170,9 @@ public class OrderAppService : IOrderAppService
         IRepository<User, long> userRepository,
         IUnitOfWork unitOfWork,
         IAppSession session,
-        IRealtimeNotifier notifier)
+        IRealtimeNotifier notifier,
+        IShippingAppService shipping,
+        IShippingProvider shippingProvider)
     {
         _orderRepository = orderRepository;
         _cartItemRepository = cartItemRepository;
@@ -149,6 +182,8 @@ public class OrderAppService : IOrderAppService
         _unitOfWork = unitOfWork;
         _session = session;
         _notifier = notifier;
+        _shipping = shipping;
+        _shippingProvider = shippingProvider;
     }
 
     // ------------------------------------------------------------------ Khách hàng
@@ -181,8 +216,23 @@ public class OrderAppService : IOrderAppService
             throw new UserFriendlyException("Một số sản phẩm trong giỏ không đủ hàng, vui lòng cập nhật lại giỏ.",
                 string.Join("\n", problems));
 
+        var address = input.ShippingAddress.Trim();
+        ShippingQuote? quote = null;
+        if (_shipping.IsEnabled)
+        {
+            if (input.ToProvinceId is not > 0 || input.ToDistrictId is not > 0 || string.IsNullOrWhiteSpace(input.ToWardCode))
+                throw new UserFriendlyException("Vui lòng chọn tỉnh / thành phố, quận / huyện và phường / xã nhận hàng.");
+
+            // Phí ship luôn do server tính lại — không nhận số tiền từ frontend.
+            quote = await _shipping.QuoteAsync(input.ToProvinceId.Value, input.ToDistrictId.Value, input.ToWardCode!,
+                cartItems.Sum(ci => ci.Quantity), cartItems.Sum(ci => ci.ProductVariant.Product.Price * ci.Quantity));
+            address = $"{address}, {quote.WardName}, {quote.DistrictName}, {quote.ProvinceName}";
+        }
+
         var order = new Order(userId, input.ReceiverName.Trim(), input.PhoneNumber.Trim(),
-            input.ShippingAddress.Trim(), input.PaymentMethod, input.Note?.Trim());
+            address, input.PaymentMethod, input.Note?.Trim());
+        if (quote != null)
+            order.SetShipping(quote.Fee, input.ToDistrictId!.Value, input.ToWardCode!.Trim());
 
         foreach (var item in cartItems)
         {
@@ -273,11 +323,34 @@ public class OrderAppService : IOrderAppService
     public async Task<OrderDto> UpdateStatusAsync(UpdateOrderStatusInput input)
     {
         var order = await LoadOrderAsync(input.Id);
-        order.ChangeStatus(input.Status);
+        order.ChangeStatus(input.Status); // kiểm tra chuyển trạng thái hợp lệ trước khi gọi GHN
+        if (input.Status == OrderStatus.Canceled && !string.IsNullOrEmpty(order.GhnOrderCode))
+        {
+            await _shippingProvider.CancelShipmentAsync(order.GhnOrderCode, $"Hủy đơn {Order.FormatCode(order.Id)}");
+            order.DetachShipment();
+        }
         var restocked = input.Status == OrderStatus.Canceled ? await RestockAsync(order) : [];
         await _unitOfWork.SaveChangesAsync();
         await NotifyStatusChangedAsync(order, restocked);
         return await GetAsync(order.Id);
+    }
+
+    public async Task ApplyShipmentStatusAsync(int orderId, OrderStatus newStatus)
+    {
+        var order = await LoadOrderAsync(orderId);
+        if (order.Status == newStatus)
+        {
+            await _unitOfWork.SaveChangesAsync(); // vẫn lưu các cột vận đơn đã cập nhật trên cùng đơn
+            return;
+        }
+
+        // Giao thành công mà đơn còn "Chờ xử lý" (nhân viên chưa bấm Đang giao): đi qua Đang giao cho đúng thứ tự.
+        if (order.Status == OrderStatus.Pending && newStatus == OrderStatus.Completed)
+            order.ChangeStatus(OrderStatus.Shipping);
+        order.ChangeStatus(newStatus);
+        var restocked = newStatus == OrderStatus.Canceled ? await RestockAsync(order) : [];
+        await _unitOfWork.SaveChangesAsync();
+        await NotifyStatusChangedAsync(order, restocked);
     }
 
     // ------------------------------------------------------------------ Hỗ trợ
@@ -322,7 +395,7 @@ public class OrderAppService : IOrderAppService
             .PageBy(input)
             .Select(o => new
             {
-                o.Id, o.CreationTime, o.Status, o.PaymentMethod, o.TotalAmount, o.ReceiverName,
+                o.Id, o.CreationTime, o.Status, o.PaymentMethod, o.TotalAmount, o.ShippingFee, o.GhnOrderCode, o.GhnStatus, o.ReceiverName,
                 ItemCount = o.Items.Sum(i => i.Quantity),
                 Lines = o.Items.OrderBy(i => i.Id)
                     .Select(i => new OrderLineSummaryDto { ProductName = i.ProductName, VariantName = i.VariantName, Quantity = i.Quantity })
@@ -338,6 +411,10 @@ public class OrderAppService : IOrderAppService
             Status = o.Status,
             PaymentMethod = o.PaymentMethod,
             TotalAmount = o.TotalAmount,
+            ShippingFee = o.ShippingFee,
+            PayableAmount = o.TotalAmount + o.ShippingFee,
+            GhnOrderCode = o.GhnOrderCode,
+            GhnStatus = o.GhnStatus,
             ItemCount = o.ItemCount,
             ReceiverName = o.ReceiverName,
             CanCancel = o.Status == OrderStatus.Pending,
@@ -361,6 +438,12 @@ public class OrderAppService : IOrderAppService
         Status = o.Status,
         PaymentMethod = o.PaymentMethod,
         TotalAmount = o.TotalAmount,
+        ShippingFee = o.ShippingFee,
+        PayableAmount = o.PayableAmount,
+        GhnOrderCode = o.GhnOrderCode,
+        GhnStatus = o.GhnStatus,
+        GhnExpectedDeliveryTime = o.GhnExpectedDeliveryTime,
+        GhnStatusTime = o.GhnStatusTime,
         ItemCount = o.Items.Sum(i => i.Quantity),
         ReceiverName = o.ReceiverName,
         CanCancel = o.Status == OrderStatus.Pending,

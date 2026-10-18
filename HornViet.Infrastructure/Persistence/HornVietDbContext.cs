@@ -114,6 +114,12 @@ public class HornVietDbContext : DbContext, IUnitOfWork
             e.Property(x => x.PhoneNumber).HasMaxLength(20).IsUnicode(false).IsRequired();
             e.Property(x => x.ShippingAddress).HasMaxLength(500).IsRequired();
             e.Property(x => x.TotalAmount).HasPrecision(18, 2);
+            e.Property(x => x.ShippingFee).HasPrecision(18, 2);
+            e.Property(x => x.ToWardCode).HasMaxLength(20).IsUnicode(false);
+            e.Property(x => x.GhnOrderCode).HasMaxLength(32).IsUnicode(false);
+            e.Property(x => x.GhnStatus).HasMaxLength(50).IsUnicode(false);
+            e.Ignore(x => x.PayableAmount);
+            e.HasIndex(x => x.GhnOrderCode); // webhook tìm đơn theo mã vận đơn
             e.Property(x => x.Note).HasMaxLength(500);
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             e.HasMany(x => x.Items).WithOne().HasForeignKey(i => i.OrderId).OnDelete(DeleteBehavior.Cascade);

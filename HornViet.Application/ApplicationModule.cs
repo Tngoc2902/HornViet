@@ -60,6 +60,7 @@ public static class ApplicationModule
         // Nhập kho & giá vốn (chỉ Quản trị viên) — để tính lợi nhuận.
         services.AddScoped<IStockReceiptAppService, StockReceiptAppService>();
         services.AddScoped<IShippingAppService, ShippingAppService>();
+        services.AddScoped<IShipmentAppService, ShipmentAppService>();
         // DataSeeder đăng ký trực tiếp theo lớp (không qua interface) vì chỉ Program.cs dùng nó lúc khởi động
         // để tạo dữ liệu ban đầu.
         services.AddScoped<DataSeeder>();

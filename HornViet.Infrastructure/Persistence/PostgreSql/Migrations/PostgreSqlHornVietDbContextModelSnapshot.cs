@@ -326,6 +326,22 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<DateTime?>("GhnExpectedDeliveryTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("GhnOrderCode")
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("GhnStatus")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("GhnStatusTime")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<DateTime?>("LastStatusChangeTime")
                         .HasColumnType("timestamp without time zone");
 
@@ -352,8 +368,20 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<decimal>("ShippingFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
+
+                    b.Property<int?>("ToDistrictId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ToWardCode")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<decimal>("TotalAmount")
                         .HasPrecision(18, 2)
@@ -363,6 +391,8 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GhnOrderCode");
 
                     b.HasIndex("Status", "CreationTime");
 

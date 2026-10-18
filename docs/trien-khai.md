@@ -214,3 +214,12 @@ Biến `NEXT_PUBLIC_*` được gắn vào mã lúc build: đổi giá trị xon
 | Đăng nhập Google báo `origin_mismatch` | Chưa thêm địa chỉ cửa hàng vào *Authorized JavaScript origins* (chờ vài phút sau khi lưu) |
 | Ảnh tải lên bị mất sau vài giờ | Chưa đặt `Cloudinary__Url` — ảnh đang lưu trên ổ đĩa tạm của Render |
 | Backend không khởi động, log nhắc `Seed__AdminPassword` | Chưa đặt mật khẩu seed (xem mục 4) |
+
+## Theo dõi vận đơn GHN (webhook)
+
+1. Trên Render, thêm biến `Ghn__WebhookToken` = một chuỗi ngẫu nhiên dài (tự đặt, giữ bí mật).
+2. Cổng GHN (developer.ghn.dev, môi trường staging) → Webhook configuration:
+   - URL: `https://hornviet-api-staging.onrender.com/api/shipping/ghn-webhook`
+   - Custom header: `X-Webhook-Token` = đúng giá trị `Ghn__WebhookToken`.
+3. GHN áp dụng cấu hình sau khoảng 15 phút. Render gói free có thể đang "ngủ" nên webhook đầu tiên có thể trễ;
+   khách và nhân viên vẫn bấm "Làm mới" để lấy trạng thái trực tiếp từ GHN.

@@ -17,6 +17,30 @@ public class Order : Entity<int>, IHasCreationTime
     public DateTime CreationTime { get; set; }
     public DateTime? LastStatusChangeTime { get; private set; }
 
+    // ---- Giao hàng (Giao Hàng Nhanh)
+
+    /// <summary>Phí vận chuyển khách trả (đồng). TotalAmount vẫn là tiền hàng nên thống kê doanh thu / lợi nhuận không đổi.</summary>
+    public decimal ShippingFee { get; private set; }
+
+    /// <summary>Mã quận / huyện và phường / xã (của GHN) của địa chỉ nhận; null khi đơn tạo lúc chưa bật vận chuyển.</summary>
+    public int? ToDistrictId { get; private set; }
+    public string? ToWardCode { get; private set; }
+
+    /// <summary>Mã vận đơn GHN (order_code); null = chưa tạo vận đơn.</summary>
+    public string? GhnOrderCode { get; private set; }
+
+    /// <summary>Trạng thái giao hàng gần nhất do GHN báo (ready_to_pick, delivering, delivered…).</summary>
+    public string? GhnStatus { get; private set; }
+
+    /// <summary>Ngày giao dự kiến do GHN trả khi tạo vận đơn.</summary>
+    public DateTime? GhnExpectedDeliveryTime { get; private set; }
+
+    /// <summary>Thời điểm trạng thái giao hàng được cập nhật gần nhất (webhook hoặc làm mới thủ công).</summary>
+    public DateTime? GhnStatusTime { get; private set; }
+
+    /// <summary>Số tiền khách phải trả: tiền hàng + phí vận chuyển (thu hộ COD đúng số này).</summary>
+    public decimal PayableAmount => TotalAmount + ShippingFee;
+
     public List<OrderItem> Items { get; private set; } = new();
 
     private Order() { }
@@ -35,6 +59,44 @@ public class Order : Entity<int>, IHasCreationTime
 
     /// <summary>Mã đơn hiển thị cho khách, VD: HSV000123.</summary>
     public static string FormatCode(int id) => $"HSV{id:D6}";
+
+    /// <summary>Ghi địa chỉ nhận (mã quận / phường của GHN) và phí vận chuyển đã được server tính.</summary>
+    public void SetShipping(decimal fee, int districtId, string wardCode)
+    {
+        ShippingFee = fee;
+        ToDistrictId = districtId;
+        ToWardCode = wardCode;
+    }
+
+    /// <summary>Lưu vận đơn vừa tạo trên GHN.</summary>
+    public void AttachShipment(string ghnOrderCode, DateTime? expectedDeliveryTime)
+    {
+        if (!string.IsNullOrEmpty(GhnOrderCode))
+            throw new UserFriendlyException($"Đơn {FormatCode(Id)} đã có vận đơn {GhnOrderCode}.");
+        GhnOrderCode = ghnOrderCode;
+        GhnStatus = "ready_to_pick";
+        GhnExpectedDeliveryTime = expectedDeliveryTime;
+        GhnStatusTime = DateTime.Now;
+    }
+
+    /// <summary>Cập nhật trạng thái giao hàng theo GHN; bỏ qua nếu không đổi. Trả true khi có thay đổi.</summary>
+    public bool UpdateShipmentStatus(string ghnStatus, DateTime? statusTime = null)
+    {
+        if (string.IsNullOrEmpty(GhnOrderCode) || GhnStatus == ghnStatus)
+            return false;
+        GhnStatus = ghnStatus;
+        GhnStatusTime = statusTime ?? DateTime.Now;
+        return true;
+    }
+
+    /// <summary>Gỡ vận đơn đã hủy trên GHN để có thể tạo lại.</summary>
+    public void DetachShipment()
+    {
+        GhnOrderCode = null;
+        GhnStatus = null;
+        GhnExpectedDeliveryTime = null;
+        GhnStatusTime = DateTime.Now;
+    }
 
     /// <param name="unitCost">Giá vốn bình quân của biến thể lúc bán (null = chưa có giá vốn).</param>
     public void AddItem(int productVariantId, string productName, string variantName, int quantity, decimal unitPrice,

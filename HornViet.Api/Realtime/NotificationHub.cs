@@ -16,6 +16,7 @@ public interface INotificationClient
     Task StockChanged(StockChangedMessage message);
     Task LowStock(LowStockMessage message);
     Task ProductChanged(ProductChangedMessage message);
+    Task ShipmentChanged(ShipmentChangedMessage message);
     Task SessionRevoked(SessionRevokedMessage message);
 }
 
@@ -25,6 +26,8 @@ public record VariantStock(int VariantId, int StockQuantity);
 public record StockChangedMessage(int ProductId, IReadOnlyList<VariantStock> Variants);
 public record LowStockMessage(int ProductId, string ProductName, int VariantId, string VariantName, int StockQuantity);
 public record ProductChangedMessage(int ProductId);
+
+public record ShipmentChangedMessage(int OrderId, string Code, string? GhnStatus);
 /// <summary>Reason: locked | rolesChanged | passwordReset | passwordChanged.</summary>
 public record SessionRevokedMessage(string Reason);
 
