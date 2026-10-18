@@ -141,6 +141,12 @@ public interface IOrderAppService
     Task<OrderDto> CancelAsync(int id);
     Task<PagedResultDto<OrderListItemDto>> GetAllAsync(GetOrdersInput input);
     Task<OrderDto> UpdateStatusAsync(UpdateOrderStatusInput input);
+
+    /// <summary>
+    /// Hệ thống áp trạng thái đơn theo kết quả giao hàng của đơn vị vận chuyển (giao thành công → Hoàn thành, hoàn hàng về → Hủy
+    /// và hoàn tồn kho). Không kiểm tra quyền người dùng — chỉ gọi từ luồng đã xác thực của hệ thống (webhook / làm mới vận đơn).
+    /// </summary>
+    Task ApplyShipmentStatusAsync(int orderId, OrderStatus newStatus);
 }
 
 public class OrderAppService : IOrderAppService
@@ -154,6 +160,7 @@ public class OrderAppService : IOrderAppService
     private readonly IAppSession _session;
     private readonly IRealtimeNotifier _notifier;
     private readonly IShippingAppService _shipping;
+    private readonly IShippingProvider _shippingProvider;
 
     public OrderAppService(
         IRepository<Order, int> orderRepository,
@@ -164,7 +171,8 @@ public class OrderAppService : IOrderAppService
         IUnitOfWork unitOfWork,
         IAppSession session,
         IRealtimeNotifier notifier,
-        IShippingAppService shipping)
+        IShippingAppService shipping,
+        IShippingProvider shippingProvider)
     {
         _orderRepository = orderRepository;
         _cartItemRepository = cartItemRepository;
@@ -175,6 +183,7 @@ public class OrderAppService : IOrderAppService
         _session = session;
         _notifier = notifier;
         _shipping = shipping;
+        _shippingProvider = shippingProvider;
     }
 
     // ------------------------------------------------------------------ Khách hàng
@@ -314,11 +323,34 @@ public class OrderAppService : IOrderAppService
     public async Task<OrderDto> UpdateStatusAsync(UpdateOrderStatusInput input)
     {
         var order = await LoadOrderAsync(input.Id);
-        order.ChangeStatus(input.Status);
+        order.ChangeStatus(input.Status); // kiểm tra chuyển trạng thái hợp lệ trước khi gọi GHN
+        if (input.Status == OrderStatus.Canceled && !string.IsNullOrEmpty(order.GhnOrderCode))
+        {
+            await _shippingProvider.CancelShipmentAsync(order.GhnOrderCode, $"Hủy đơn {Order.FormatCode(order.Id)}");
+            order.DetachShipment();
+        }
         var restocked = input.Status == OrderStatus.Canceled ? await RestockAsync(order) : [];
         await _unitOfWork.SaveChangesAsync();
         await NotifyStatusChangedAsync(order, restocked);
         return await GetAsync(order.Id);
+    }
+
+    public async Task ApplyShipmentStatusAsync(int orderId, OrderStatus newStatus)
+    {
+        var order = await LoadOrderAsync(orderId);
+        if (order.Status == newStatus)
+        {
+            await _unitOfWork.SaveChangesAsync(); // vẫn lưu các cột vận đơn đã cập nhật trên cùng đơn
+            return;
+        }
+
+        // Giao thành công mà đơn còn "Chờ xử lý" (nhân viên chưa bấm Đang giao): đi qua Đang giao cho đúng thứ tự.
+        if (order.Status == OrderStatus.Pending && newStatus == OrderStatus.Completed)
+            order.ChangeStatus(OrderStatus.Shipping);
+        order.ChangeStatus(newStatus);
+        var restocked = newStatus == OrderStatus.Canceled ? await RestockAsync(order) : [];
+        await _unitOfWork.SaveChangesAsync();
+        await NotifyStatusChangedAsync(order, restocked);
     }
 
     // ------------------------------------------------------------------ Hỗ trợ

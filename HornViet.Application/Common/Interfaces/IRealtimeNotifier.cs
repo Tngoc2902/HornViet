@@ -29,6 +29,9 @@ public interface IRealtimeNotifier
     /// <summary>Thông tin sản phẩm đổi (sửa, ẩn / hiện, xóa) → trang chi tiết đang mở tự tải lại.</summary>
     Task ProductChangedAsync(int productId);
 
+    /// <summary>Vận đơn của một đơn hàng đổi (tạo / hủy / đổi trạng thái giao hàng) → chủ đơn và nhân viên tải lại tiến trình giao.</summary>
+    Task ShipmentChangedAsync(ShipmentChangedEvent e);
+
     /// <summary>Phiên đăng nhập của tài khoản bị thu hồi (khóa, đổi vai trò, đổi / đặt lại mật khẩu) → đăng xuất ngay.</summary>
     Task SessionRevokedAsync(long userId, SessionRevokedReason reason);
 }
@@ -37,6 +40,8 @@ public interface IRealtimeNotifier
 public record OrderCreatedEvent(int OrderId, string Code, int ItemCount, decimal TotalAmount, DateTime CreationTime);
 
 /// <summary><paramref name="UserId"/> dùng để chọn người nhận (chủ đơn), không gửi ra giao diện.</summary>
+public record ShipmentChangedEvent(int OrderId, string Code, long UserId, string? GhnStatus);
+
 public record OrderStatusChangedEvent(int OrderId, string Code, long UserId, OrderStatus Status);
 
 /// <summary>Tồn kho mới của một biến thể; tên sản phẩm / biến thể dùng cho cảnh báo sắp hết hàng.</summary>

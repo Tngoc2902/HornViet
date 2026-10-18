@@ -27,6 +27,17 @@ public class GhnOptions
     /// <summary>Cân nặng mặc định của một sản phẩm (gam) khi chưa khai báo cân nặng riêng.</summary>
     public int DefaultItemWeightGrams { get; set; } = 200;
 
+    /// <summary>
+    /// Khóa bí mật xác thực webhook: GHN gửi kèm header (tên ở WebhookHeader) có giá trị này (cấu hình "Custom headers" ở cổng
+    /// GHN → Webhook configuration). Để trống = từ chối mọi webhook.
+    /// </summary>
+    public string? WebhookToken { get; set; }
+
+    public string WebhookHeader { get; set; } = "X-Webhook-Token";
+
+    /// <summary>Ghi chú cho shipper: CHOXEMHANGKHONGTHU (cho xem, không cho thử) | KHONGCHOXEMHANG | CHOTHUHANG.</summary>
+    public string RequiredNote { get; set; } = "CHOXEMHANGKHONGTHU";
+
     /// <summary>Kích thước mặc định của kiện hàng (cm).</summary>
     public int DefaultLengthCm { get; set; } = 20;
     public int DefaultWidthCm { get; set; } = 15;
@@ -108,6 +119,72 @@ public class GhnShippingProvider : IShippingProvider
         return new ShippingFee(data.GetProperty("total").GetDecimal());
     }
 
+    public async Task<ShipmentCreated> CreateShipmentAsync(ShipmentRequest request, CancellationToken ct = default)
+    {
+        if (request.CodAmount > 50_000_000m)
+            throw new UserFriendlyException("GHN chỉ thu hộ tối đa 50.000.000 đ cho một đơn.");
+
+        var data = await SendAsync(HttpMethod.Post, "/shiip/public-api/v2/shipping-order/create", new
+        {
+            payment_type_id = 1, // shop trả cước cho GHN; phí ship của khách đã nằm trong tiền thu hộ (COD) hoặc đã thanh toán trước
+            required_note = _options.RequiredNote,
+            client_order_code = request.ClientOrderCode,
+            to_name = request.ToName,
+            to_phone = request.ToPhone,
+            to_address = request.ToAddress,
+            to_ward_code = request.ToWardCode,
+            to_district_id = request.ToDistrictId,
+            cod_amount = (int)request.CodAmount,
+            content = request.Content,
+            note = request.Note,
+            weight = request.WeightGrams,
+            length = _options.DefaultLengthCm,
+            width = _options.DefaultWidthCm,
+            height = _options.DefaultHeightCm,
+            insurance_value = (int)Math.Min(request.InsuranceValue, 5_000_000m),
+            service_type_id = 2,
+            items = request.Items.Select(i => new { name = i.Name, quantity = i.Quantity, price = (int)i.Price, weight = i.WeightGrams }).ToArray()
+        }, ct, forStaff: true);
+
+        var expected = data.TryGetProperty("expected_delivery_time", out var e) && e.ValueKind == JsonValueKind.String ? ParseTime(e.GetString()) : null;
+        var total = data.TryGetProperty("total_fee", out var t) && t.ValueKind == JsonValueKind.Number ? t.GetDecimal() : 0;
+        return new ShipmentCreated(data.GetProperty("order_code").GetString()!, expected, total);
+    }
+
+    public async Task<ShipmentInfo> GetShipmentAsync(string orderCode, CancellationToken ct = default)
+    {
+        var data = await SendAsync(HttpMethod.Post, "/shiip/public-api/v2/shipping-order/detail", new { order_code = orderCode }, ct, forStaff: true);
+        var status = data.GetProperty("status").GetString()!;
+        DateTime? updated = data.TryGetProperty("updated_date", out var u) && u.ValueKind == JsonValueKind.String ? ParseTime(u.GetString()) : null;
+        DateTime? expected = data.TryGetProperty("leadtime", out var l) && l.ValueKind == JsonValueKind.String ? ParseTime(l.GetString()) : null;
+        return new ShipmentInfo(status, updated, expected);
+    }
+
+    public async Task CancelShipmentAsync(string orderCode, string reason, CancellationToken ct = default)
+    {
+        var data = await SendAsync(HttpMethod.Post, "/shiip/public-api/v2/switch-status/cancel", new
+        {
+            order_codes = new[] { orderCode },
+            reason_code = "GHN-CANCEL-OTHER",
+            reason
+        }, ct, forStaff: true);
+
+        // Mã hợp lệ nhưng đơn đã được lấy hàng → GHN trả result:false, không phải lỗi HTTP.
+        var entry = data.EnumerateArray().FirstOrDefault();
+        if (entry.ValueKind == JsonValueKind.Object && entry.TryGetProperty("result", out var r) && r.ValueKind == JsonValueKind.False)
+            throw new UserFriendlyException("GHN không cho hủy vận đơn này (đơn đã được lấy hàng hoặc đang vận chuyển).");
+    }
+
+    public async Task<string> GetPrintUrlAsync(string orderCode, CancellationToken ct = default)
+    {
+        var data = await SendAsync(HttpMethod.Post, "/shiip/public-api/v2/a5/gen-token", new { order_codes = new[] { orderCode } }, ct, forStaff: true);
+        return $"{_options.BaseUrl.TrimEnd('/')}/a5/public-api/printA5?token={Uri.EscapeDataString(data.GetProperty("token").GetString()!)}";
+    }
+
+    // GHN trả thời gian ISO 8601 (UTC); hệ thống lưu giờ địa phương.
+    private static DateTime? ParseTime(string? value) =>
+        DateTimeOffset.TryParse(value, out var t) ? t.LocalDateTime : null;
+
     // Mục master-data có thể bị GHN tắt (IsEnable / Status = 0): không đưa cho khách chọn.
     private static bool IsUsable(JsonElement e) =>
         !(e.TryGetProperty("IsEnable", out var enabled) && enabled.ValueKind == JsonValueKind.Number && enabled.GetInt32() == 0) &&
@@ -123,7 +200,7 @@ public class GhnShippingProvider : IShippingProvider
     }
 
     /// <summary>Gọi GHN, kiểm tra mã trả về và trả phần "data". Lỗi GHN ghi vào log, người dùng chỉ thấy thông báo chung.</summary>
-    private async Task<JsonElement> SendAsync(HttpMethod method, string path, object? body, CancellationToken ct)
+    private async Task<JsonElement> SendAsync(HttpMethod method, string path, object? body, CancellationToken ct, bool forStaff = false)
     {
         if (!_options.IsConfigured)
             throw new UserFriendlyException("Cửa hàng chưa bật dịch vụ giao hàng.");
@@ -141,7 +218,7 @@ public class GhnShippingProvider : IShippingProvider
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("GHN {Method} {Path} trả {Status}: {Body}", method, path, (int)response.StatusCode, Truncate(text));
-                throw new UserFriendlyException(FriendlyMessage(text));
+                throw new UserFriendlyException(forStaff ? StaffMessage(text) : FriendlyMessage(text));
             }
 
             using var doc = JsonDocument.Parse(text);
@@ -149,7 +226,7 @@ public class GhnShippingProvider : IShippingProvider
             if (root.TryGetProperty("code", out var code) && code.GetInt32() != 200)
             {
                 _logger.LogWarning("GHN {Method} {Path} code {Code}: {Body}", method, path, code.GetInt32(), Truncate(text));
-                throw new UserFriendlyException(FriendlyMessage(text));
+                throw new UserFriendlyException(forStaff ? StaffMessage(text) : FriendlyMessage(text));
             }
 
             return root.GetProperty("data").Clone();
@@ -184,6 +261,23 @@ public class GhnShippingProvider : IShippingProvider
         }
         catch (JsonException) { }
         return "Dịch vụ giao hàng không tính được phí cho địa chỉ này.";
+    }
+
+    // Dành cho nhân viên / quản trị: hiện nguyên lý do GHN từ chối (VD "không lấy được thông tin kho", "số điện thoại không hợp lệ")
+    // để biết sửa gì; vẫn là lỗi nghiệp vụ nên không ảnh hưởng khách.
+    private static string StaffMessage(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            string? Get(string name) => root.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(v.GetString()) ? v.GetString() : null;
+            var detail = Get("message") ?? Get("code_message_value");
+            if (detail != null)
+                return "GHN từ chối: " + detail;
+        }
+        catch (JsonException) { }
+        return "GHN từ chối yêu cầu. Vui lòng kiểm tra lại thông tin đơn.";
     }
 
     private static string Truncate(string s) => s.Length <= 500 ? s : s[..500];
