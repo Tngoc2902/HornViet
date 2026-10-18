@@ -326,6 +326,22 @@ namespace HornViet.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("GhnExpectedDeliveryTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GhnOrderCode")
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("GhnStatus")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime?>("GhnStatusTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("LastStatusChangeTime")
                         .HasColumnType("datetime2");
 
@@ -352,8 +368,20 @@ namespace HornViet.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<decimal>("ShippingFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
+
+                    b.Property<int?>("ToDistrictId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ToWardCode")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
 
                     b.Property<decimal>("TotalAmount")
                         .HasPrecision(18, 2)
@@ -363,6 +391,8 @@ namespace HornViet.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GhnOrderCode");
 
                     b.HasIndex("Status", "CreationTime");
 

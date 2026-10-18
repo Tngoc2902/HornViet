@@ -56,7 +56,16 @@ public interface IShippingAppService
 
     /// <summary>Phí ship cho giỏ hàng của người dùng hiện tại tới địa chỉ đã chọn.</summary>
     Task<ShippingFeeDto> CalculateFeeAsync(CalculateShippingFeeInput input);
+
+    /// <summary>
+    /// Dùng khi đặt hàng: kiểm tra Tỉnh / Quận / Phường khách chọn thuộc nhau (theo danh mục của đơn vị vận chuyển, không tin
+    /// tên frontend gửi), lấy tên chuẩn để ghép địa chỉ và tính phí ship cho đúng số lượng / tiền hàng của đơn.
+    /// </summary>
+    Task<ShippingQuote> QuoteAsync(int provinceId, int districtId, string wardCode, int quantity, decimal subTotal);
 }
+
+/// <summary>Kết quả kiểm tra địa chỉ và phí ship của một đơn.</summary>
+public record ShippingQuote(decimal Fee, string ProvinceName, string DistrictName, string WardName);
 
 /// <summary>
 /// Danh mục địa chỉ và phí vận chuyển. Phí ship luôn do server tính từ giỏ hàng — không tin số tiền frontend gửi lên.
@@ -111,15 +120,35 @@ public class ShippingAppService : IShippingAppService
         if (items.Count == 0)
             throw new UserFriendlyException("Giỏ hàng trống hoặc sản phẩm đã hết hàng.");
 
-        var quantity = items.Sum(i => i.Quantity);
+        var fee = await FeeAsync(input.ToDistrictId, input.ToWardCode.Trim(), items.Sum(i => i.Quantity), items.Sum(i => i.LineTotal));
+        return new ShippingFeeDto { IsEnabled = true, Fee = fee };
+    }
+
+    public async Task<ShippingQuote> QuoteAsync(int provinceId, int districtId, string wardCode, int quantity, decimal subTotal)
+    {
+        EnsureEnabled();
+        wardCode = wardCode.Trim();
+
+        // Tên địa chỉ lấy từ danh mục chuẩn và phải khớp nhau — khách không thể ghép quận của tỉnh này với phường của tỉnh khác.
+        var province = (await _provider.GetProvincesAsync()).FirstOrDefault(p => p.Id == provinceId)
+                       ?? throw new UserFriendlyException("Tỉnh / thành phố không hợp lệ.");
+        var district = (await _provider.GetDistrictsAsync(provinceId)).FirstOrDefault(d => d.Id == districtId)
+                       ?? throw new UserFriendlyException("Quận / huyện không thuộc tỉnh / thành phố đã chọn.");
+        var ward = (await _provider.GetWardsAsync(districtId)).FirstOrDefault(w => w.Code == wardCode)
+                   ?? throw new UserFriendlyException("Phường / xã không thuộc quận / huyện đã chọn.");
+
+        var fee = await FeeAsync(districtId, wardCode, quantity, subTotal);
+        return new ShippingQuote(fee, province.Name, district.Name, ward.Name);
+    }
+
+    private async Task<decimal> FeeAsync(int districtId, string wardCode, int quantity, decimal subTotal)
+    {
         var weight = quantity * _provider.DefaultItemWeightGrams;
         if (weight >= MaxLightWeightGrams)
             throw new UserFriendlyException("Đơn hàng quá nặng để giao nhanh qua hệ thống. Vui lòng giảm số lượng hoặc liên hệ cửa hàng.");
 
-        var subTotal = items.Sum(i => i.LineTotal);
-        var fee = await _provider.CalculateFeeAsync(
-            new ShippingFeeRequest(input.ToDistrictId, input.ToWardCode.Trim(), weight, subTotal));
-        return new ShippingFeeDto { IsEnabled = true, Fee = fee.Total };
+        var fee = await _provider.CalculateFeeAsync(new ShippingFeeRequest(districtId, wardCode, weight, subTotal));
+        return fee.Total;
     }
 
     private void EnsureEnabled()
