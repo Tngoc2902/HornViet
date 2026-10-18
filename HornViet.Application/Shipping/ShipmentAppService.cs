@@ -42,6 +42,12 @@ public interface IShipmentAppService
     /// <summary>Tạo vận đơn cho đơn hàng (nhân viên). Đơn "Chờ xử lý" tự chuyển sang "Đang giao".</summary>
     Task<ShipmentDto> CreateAsync(int orderId);
 
+    /// <summary>
+    /// Tự tạo vận đơn ngay sau khi khách đặt hàng. Không bao giờ ném lỗi: thất bại (GHN lỗi, thiếu kho…) chỉ ghi log, đơn
+    /// vẫn "Chờ xử lý" để nhân viên tạo vận đơn thủ công. Đơn giữ "Chờ xử lý" đến khi đơn vị vận chuyển lấy hàng.
+    /// </summary>
+    Task TryAutoCreateAsync(int orderId);
+
     /// <summary>Hủy vận đơn trên đơn vị vận chuyển để tạo lại (đơn chưa được lấy hàng).</summary>
     Task<ShipmentDto> CancelAsync(int orderId);
 
@@ -81,7 +87,29 @@ public class ShipmentAppService : IShipmentAppService
     {
         EnsureEnabled();
         var order = await LoadAsync(orderId);
+        await CreateCoreAsync(order, moveToShipping: true);
+        return ToDto(order);
+    }
 
+    public async Task TryAutoCreateAsync(int orderId)
+    {
+        try
+        {
+            if (!_provider.IsEnabled)
+                return;
+            var order = await _orderRepository.GetAll().Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == orderId);
+            if (order == null || order.Status != OrderStatus.Pending || order.ToDistrictId is null)
+                return;
+            await CreateCoreAsync(order, moveToShipping: false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Tự tạo vận đơn cho đơn {OrderId} thất bại, nhân viên cần tạo thủ công.", orderId);
+        }
+    }
+
+    private async Task CreateCoreAsync(Order order, bool moveToShipping)
+    {
         if (!string.IsNullOrEmpty(order.GhnOrderCode))
             throw new UserFriendlyException($"Đơn {Order.FormatCode(order.Id)} đã có vận đơn {order.GhnOrderCode}.");
         if (order.Status is not (OrderStatus.Pending or OrderStatus.Shipping))
@@ -103,9 +131,11 @@ public class ShipmentAppService : IShipmentAppService
                 _provider.DefaultItemWeightGrams)).ToList()));
 
         order.AttachShipment(created.OrderCode, created.ExpectedDeliveryTime);
-        await _orderService.ApplyShipmentStatusAsync(order.Id, OrderStatus.Shipping); // Chờ xử lý → Đang giao, lưu cùng vận đơn
+        if (moveToShipping)
+            await _orderService.ApplyShipmentStatusAsync(order.Id, OrderStatus.Shipping); // Chờ xử lý → Đang giao, lưu cùng vận đơn
+        else
+            await _unitOfWork.SaveChangesAsync();
         await NotifyAsync(order);
-        return ToDto(order);
     }
 
     public async Task<ShipmentDto> CancelAsync(int orderId)
@@ -188,6 +218,8 @@ public class ShipmentAppService : IShipmentAppService
                 await _orderService.ApplyShipmentStatusAsync(order.Id, OrderStatus.Completed);
             else if (ghnStatus == "returned")
                 await _orderService.ApplyShipmentStatusAsync(order.Id, OrderStatus.Canceled);
+            else if (order.Status == OrderStatus.Pending && PickedUp.Contains(ghnStatus))
+                await _orderService.ApplyShipmentStatusAsync(order.Id, OrderStatus.Shipping); // GHN đã lấy hàng → Đang giao
             else
                 await _unitOfWork.SaveChangesAsync();
         }
@@ -203,6 +235,8 @@ public class ShipmentAppService : IShipmentAppService
 
     private Task NotifyAsync(Order order) =>
         _notifier.ShipmentChangedAsync(new ShipmentChangedEvent(order.Id, Order.FormatCode(order.Id), order.UserId, order.GhnStatus));
+
+    private static readonly HashSet<string> PickedUp = ["picked", "storing", "sorting", "transporting", "delivering"];
 
     private static bool IsFinal(string? status) => status is "delivered" or "returned";
 

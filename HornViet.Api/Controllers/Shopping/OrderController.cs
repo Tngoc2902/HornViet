@@ -1,6 +1,7 @@
 using HornViet.Api.Authorization;
 using HornViet.Application.Common;
 using HornViet.Application.Orders;
+using HornViet.Application.Shipping;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,11 +12,22 @@ namespace HornViet.Api.Controllers.Shopping;
 public class OrderController : HornVietBaseController
 {
     private readonly IOrderAppService _service;
+    private readonly IShipmentAppService _shipments;
 
-    public OrderController(IOrderAppService service) => _service = service;
+    public OrderController(IOrderAppService service, IShipmentAppService shipments)
+    {
+        _service = service;
+        _shipments = shipments;
+    }
 
     [HttpPost]
-    public Task<ActionResult<OrderDto>> Create([FromBody] CreateOrderInput input) => Run(() => _service.CreateAsync(input));
+    public Task<ActionResult<OrderDto>> Create([FromBody] CreateOrderInput input) => Run(async () =>
+    {
+        var order = await _service.CreateAsync(input);
+        // Đặt hàng đã lưu xong; việc lên đơn GHN chạy sau và không bao giờ làm hỏng việc đặt hàng.
+        await _shipments.TryAutoCreateAsync(order.Id);
+        return await _service.GetAsync(order.Id);
+    });
 
     [HttpGet]
     public Task<ActionResult<PagedResultDto<OrderListItemDto>>> GetMyOrders([FromQuery] GetMyOrdersInput input) => Run(() => _service.GetMyOrdersAsync(input));
