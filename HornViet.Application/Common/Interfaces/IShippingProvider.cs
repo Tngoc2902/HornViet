@@ -9,6 +9,9 @@ public interface IShippingProvider
     /// <summary>Đã cấu hình Token / ShopId; chưa thì tính năng vận chuyển tắt và đặt hàng chạy như cũ (phí ship = 0).</summary>
     bool IsEnabled { get; }
 
+    /// <summary>Đang dùng môi trường thử của đơn vị vận chuyển (không có shipper thật, trạng thái không tự đổi).</summary>
+    bool IsSandbox { get; }
+
     /// <summary>Cân nặng mặc định của một sản phẩm (gam) khi sản phẩm chưa khai báo cân nặng riêng.</summary>
     int DefaultItemWeightGrams { get; }
 

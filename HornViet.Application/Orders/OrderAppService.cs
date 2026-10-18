@@ -329,6 +329,8 @@ public class OrderAppService : IOrderAppService
     public async Task<OrderDto> UpdateStatusAsync(UpdateOrderStatusInput input)
     {
         var order = await LoadOrderAsync(input.Id);
+        if (!string.IsNullOrEmpty(order.GhnOrderCode) && input.Status != OrderStatus.Canceled)
+            throw new UserFriendlyException("Đơn đã có vận đơn Giao Hàng Nhanh: trạng thái tự cập nhật theo đơn vị vận chuyển.");
         order.ChangeStatus(input.Status); // kiểm tra chuyển trạng thái hợp lệ trước khi gọi GHN
         if (input.Status == OrderStatus.Canceled && !string.IsNullOrEmpty(order.GhnOrderCode))
         {

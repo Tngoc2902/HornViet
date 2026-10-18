@@ -181,6 +181,8 @@ public class HornVietDbContext : DbContext, IUnitOfWork
             e.Property(x => x.ReceiverName).HasMaxLength(255).IsRequired();
             e.Property(x => x.PhoneNumber).HasMaxLength(20).IsUnicode(false).IsRequired();
             e.Property(x => x.Address).HasMaxLength(500).IsRequired();
+            e.Property(x => x.WardCode).HasMaxLength(20).IsUnicode(false);
+            e.Property(x => x.Street).HasMaxLength(300);
         });
 
         // Phiếu nhập kho (chỉ Quản trị viên). Restrict: không xóa được biến thể / người dùng còn phiếu nhập tham chiếu.

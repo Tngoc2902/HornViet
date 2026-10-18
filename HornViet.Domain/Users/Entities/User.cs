@@ -59,7 +59,14 @@ public class UserAddress : Entity<int>, IHasCreationTime
     public long UserId { get; set; }
     public string ReceiverName { get; set; } = null!;
     public string PhoneNumber { get; set; } = null!;
+    /// <summary>Địa chỉ đầy đủ để hiển thị (số nhà, phường, tỉnh).</summary>
     public string Address { get; set; } = null!;
+
+    /// <summary>Mã tỉnh / phường (danh mục mới 2 cấp của GHN) và số nhà; null ở địa chỉ lưu trước khi bật giao hàng nhanh.</summary>
+    public int? ProvinceId { get; set; }
+    public string? WardCode { get; set; }
+    public string? Street { get; set; }
+
     public bool IsDefault { get; set; }
     public DateTime CreationTime { get; set; }
 }

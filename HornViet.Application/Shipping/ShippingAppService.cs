@@ -43,6 +43,9 @@ public interface IShippingAppService
     /// <summary>Đã bật vận chuyển (frontend dùng để quyết định có hiện bộ chọn Tỉnh / Quận / Phường không).</summary>
     bool IsEnabled { get; }
 
+    /// <summary>Môi trường thử của đơn vị vận chuyển — trang quản trị hiện công cụ giả lập trạng thái giao hàng.</summary>
+    bool IsSandbox { get; }
+
     Task<IReadOnlyList<ProvinceDto>> GetProvincesAsync();
     Task<IReadOnlyList<WardDto>> GetWardsAsync(int provinceId);
 
@@ -80,6 +83,8 @@ public class ShippingAppService : IShippingAppService
     }
 
     public bool IsEnabled => _provider.IsEnabled;
+
+    public bool IsSandbox => _provider.IsEnabled && _provider.IsSandbox;
 
     public async Task<IReadOnlyList<ProvinceDto>> GetProvincesAsync()
     {

@@ -25,6 +25,10 @@ public class ShipmentController : HornVietBaseController
     [HttpGet, Authorize(Policy = AuthorizationPolicies.Management)]
     public Task<ActionResult<string>> GetLabelUrl([FromQuery] int orderId) => Run(() => _service.GetLabelUrlAsync(orderId));
 
+    /// <summary>Chỉ môi trường thử: giả lập GHN đổi trạng thái vận đơn.</summary>
+    [HttpPost, Authorize(Policy = AuthorizationPolicies.Management)]
+    public Task<ActionResult<ShipmentDto>> Simulate([FromBody] SimulateShipmentInput input) => Run(() => _service.SimulateAsync(input));
+
     [HttpGet, Authorize]
     public Task<ActionResult<ShipmentDto>> Get([FromQuery] int orderId, [FromQuery] bool refresh = false) =>
         Run(() => _service.GetAsync(orderId, refresh));

@@ -626,13 +626,25 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                         .IsUnicode(false)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<int?>("ProvinceId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ReceiverName")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<string>("Street")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("WardCode")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
 
