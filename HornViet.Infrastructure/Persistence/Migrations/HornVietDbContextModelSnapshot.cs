@@ -378,6 +378,13 @@ namespace HornViet.Infrastructure.Persistence.Migrations
                     b.Property<int?>("ToDistrictId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ToProvinceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ToStreet")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
                     b.Property<string>("ToWardCode")
                         .HasMaxLength(20)
                         .IsUnicode(false)

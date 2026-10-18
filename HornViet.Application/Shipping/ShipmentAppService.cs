@@ -65,17 +65,19 @@ public class ShipmentAppService : IShipmentAppService
 {
     private readonly IRepository<Order, int> _orderRepository;
     private readonly IShippingProvider _provider;
+    private readonly IShippingAppService _shipping;
     private readonly IOrderAppService _orderService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAppSession _session;
     private readonly IRealtimeNotifier _notifier;
     private readonly ILogger<ShipmentAppService> _logger;
 
-    public ShipmentAppService(IRepository<Order, int> orderRepository, IShippingProvider provider, IOrderAppService orderService,
+    public ShipmentAppService(IRepository<Order, int> orderRepository, IShippingProvider provider, IShippingAppService shipping, IOrderAppService orderService,
         IUnitOfWork unitOfWork, IAppSession session, IRealtimeNotifier notifier, ILogger<ShipmentAppService> logger)
     {
         _orderRepository = orderRepository;
         _provider = provider;
+        _shipping = shipping;
         _orderService = orderService;
         _unitOfWork = unitOfWork;
         _session = session;
@@ -98,7 +100,7 @@ public class ShipmentAppService : IShipmentAppService
             if (!_provider.IsEnabled)
                 return;
             var order = await _orderRepository.GetAll().Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == orderId);
-            if (order == null || order.Status != OrderStatus.Pending || order.ToDistrictId is null)
+            if (order == null || order.Status != OrderStatus.Pending || order.ToProvinceId is null)
                 return;
             await CreateCoreAsync(order, moveToShipping: false);
         }
@@ -114,8 +116,11 @@ public class ShipmentAppService : IShipmentAppService
             throw new UserFriendlyException($"Đơn {Order.FormatCode(order.Id)} đã có vận đơn {order.GhnOrderCode}.");
         if (order.Status is not (OrderStatus.Pending or OrderStatus.Shipping))
             throw new UserFriendlyException("Chỉ tạo vận đơn cho đơn đang chờ xử lý hoặc đang giao.");
-        if (order.ToDistrictId is null || string.IsNullOrEmpty(order.ToWardCode))
-            throw new UserFriendlyException("Đơn này đặt khi chưa bật giao hàng nhanh nên không có mã quận / phường để tạo vận đơn.");
+        if (order.ToProvinceId is null || string.IsNullOrEmpty(order.ToWardCode))
+            throw new UserFriendlyException(order.ToDistrictId != null
+                ? "Đơn này dùng địa chỉ cũ (có quận / huyện) mà GHN không còn nhận. Vui lòng tạo vận đơn thủ công trên cổng GHN."
+                : "Đơn này đặt khi chưa bật giao hàng nhanh nên không có mã tỉnh / phường để tạo vận đơn.");
+        var (provinceName, wardName) = await _shipping.ResolveNamesAsync(order.ToProvinceId.Value, order.ToWardCode);
 
         var code = Order.FormatCode(order.Id);
         // Mã đơn gửi GHN phải duy nhất; tạo lại sau khi hủy mà gửi lại mã cũ thì GHN trả về vận đơn đã hủy → thêm hậu tố thời gian.
@@ -123,7 +128,7 @@ public class ShipmentAppService : IShipmentAppService
         var weight = order.Items.Sum(i => i.Quantity) * _provider.DefaultItemWeightGrams;
 
         var created = await _provider.CreateShipmentAsync(new ShipmentRequest(
-            clientCode, order.ReceiverName, order.PhoneNumber, order.ShippingAddress, order.ToDistrictId.Value, order.ToWardCode,
+            clientCode, order.ReceiverName, order.PhoneNumber, order.ToStreet ?? order.ShippingAddress, provinceName, wardName,
             // Thu hộ đúng số khách phải trả khi COD; chuyển khoản (đã thanh toán) thì không thu hộ.
             order.PaymentMethod == PaymentMethod.COD ? order.PayableAmount : 0,
             order.TotalAmount, weight, $"Đơn {code} – Hồn Sừng Việt", order.Note,

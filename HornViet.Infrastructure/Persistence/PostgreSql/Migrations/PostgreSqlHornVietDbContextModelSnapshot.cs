@@ -378,6 +378,13 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                     b.Property<int?>("ToDistrictId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("ToProvinceId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ToStreet")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
                     b.Property<string>("ToWardCode")
                         .HasMaxLength(20)
                         .IsUnicode(false)
