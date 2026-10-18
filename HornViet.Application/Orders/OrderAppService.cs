@@ -291,6 +291,12 @@ public class OrderAppService : IOrderAppService
             throw new UserFriendlyException("Đơn hàng đã được xử lý hoặc đang giao, không thể hủy.");
 
         order.ChangeStatus(OrderStatus.Canceled);
+        // Đơn đã tự lên GHN lúc đặt: hủy cả vận đơn (GHN từ chối vì shipper đã lấy hàng thì không hủy đơn).
+        if (!string.IsNullOrEmpty(order.GhnOrderCode))
+        {
+            await _shippingProvider.CancelShipmentAsync(order.GhnOrderCode, $"Khách hủy đơn {Order.FormatCode(order.Id)}");
+            order.DetachShipment();
+        }
         var restocked = await RestockAsync(order);
         await _unitOfWork.SaveChangesAsync();
         await NotifyStatusChangedAsync(order, restocked);
