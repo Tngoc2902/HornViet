@@ -76,6 +76,8 @@ public class ProductListItemDto
     public decimal Price { get; set; }
     /// <summary>URL ảnh đại diện hiển thị trên thẻ sản phẩm.</summary>
     public string MainImage { get; set; } = null!;
+    /// <summary>Ảnh thứ hai (khác ảnh đại diện) — thẻ sản phẩm đổi sang ảnh này khi rê chuột; null nếu sản phẩm chỉ có một ảnh.</summary>
+    public string? HoverImage { get; set; }
     /// <summary>Id danh mục của sản phẩm.</summary>
     public int CategoryId { get; set; }
     /// <summary>Tên danh mục (lấy từ bảng Categories) để hiển thị kèm, frontend không phải gọi API thêm.</summary>

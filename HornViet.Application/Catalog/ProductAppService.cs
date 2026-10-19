@@ -107,6 +107,7 @@ public class ProductAppService : IProductAppService
                 Name = p.Name,
                 Price = p.Price,
                 MainImage = p.MainImage,
+                HoverImage = p.Images.Where(i => i.ImageUrl != p.MainImage).OrderBy(i => i.DisplayOrder).Select(i => i.ImageUrl).FirstOrDefault(),
                 CategoryId = p.CategoryId,
                 CategoryName = p.Category.Name,
                 MaterialId = p.MaterialId,
