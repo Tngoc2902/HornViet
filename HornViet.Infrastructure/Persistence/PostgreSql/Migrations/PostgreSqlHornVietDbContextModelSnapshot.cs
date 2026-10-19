@@ -103,6 +103,85 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                     b.ToTable("Categories", (string)null);
                 });
 
+            modelBuilder.Entity("HornViet.Domain.Catalog.Entities.Collection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CoverImage")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(120)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.HasIndex("IsActive", "DisplayOrder");
+
+                    b.ToTable("Collections", (string)null);
+                });
+
+            modelBuilder.Entity("HornViet.Domain.Catalog.Entities.CollectionProduct", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CollectionId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("CollectionId", "ProductId")
+                        .IsUnique();
+
+                    b.ToTable("CollectionProducts", (string)null);
+                });
+
             modelBuilder.Entity("HornViet.Domain.Catalog.Entities.Material", b =>
                 {
                     b.Property<int>("Id")
@@ -706,6 +785,23 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                     b.Navigation("ProductVariant");
                 });
 
+            modelBuilder.Entity("HornViet.Domain.Catalog.Entities.CollectionProduct", b =>
+                {
+                    b.HasOne("HornViet.Domain.Catalog.Entities.Collection", null)
+                        .WithMany("Items")
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("HornViet.Domain.Catalog.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("HornViet.Domain.Catalog.Entities.Product", b =>
                 {
                     b.HasOne("HornViet.Domain.Catalog.Entities.Category", "Category")
@@ -822,6 +918,11 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                 });
 
             modelBuilder.Entity("HornViet.Domain.Carts.Entities.Cart", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("HornViet.Domain.Catalog.Entities.Collection", b =>
                 {
                     b.Navigation("Items");
                 });

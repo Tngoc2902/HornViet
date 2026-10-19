@@ -26,6 +26,8 @@ public class HornVietDbContext : DbContext, IUnitOfWork
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
+    public DbSet<Collection> Collections => Set<Collection>();
+    public DbSet<CollectionProduct> CollectionProducts => Set<CollectionProduct>();
     public DbSet<Cart> Carts => Set<Cart>();
     public DbSet<CartItem> CartItems => Set<CartItem>();
     public DbSet<Order> Orders => Set<Order>();
@@ -90,6 +92,29 @@ public class HornVietDbContext : DbContext, IUnitOfWork
         {
             e.ToTable("ProductImages");
             e.Property(x => x.ImageUrl).HasMaxLength(500).IsRequired();
+        });
+
+        // Bộ sưu tập: liên kết sản phẩm thuộc về bộ sưu tập (Cascade); sản phẩm chỉ xóa mềm nên phía sản phẩm để Restrict.
+        b.Entity<Collection>(e =>
+        {
+            e.ToTable("Collections");
+            e.Property(x => x.Name).HasMaxLength(255).IsRequired();
+            e.Property(x => x.Slug).HasMaxLength(120).IsUnicode(false).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(1000);
+            e.Property(x => x.CoverImage).HasMaxLength(500);
+            e.Property(x => x.IsActive).HasDefaultValue(true);
+            e.HasIndex(x => x.Slug).IsUnique().HasFilter(NotDeletedFilter);
+            e.HasIndex(x => new { x.IsActive, x.DisplayOrder });
+            e.HasMany(x => x.Items).WithOne().HasForeignKey(i => i.CollectionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<CollectionProduct>(e =>
+        {
+            e.ToTable("CollectionProducts");
+            e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.CollectionId, x.ProductId }).IsUnique();
+            // Sản phẩm đã xóa mềm không còn tính là thuộc bộ sưu tập.
+            e.HasQueryFilter(x => !x.Product.IsDeleted);
         });
 
         b.Entity<Cart>(e =>

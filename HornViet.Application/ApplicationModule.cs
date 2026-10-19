@@ -47,6 +47,8 @@ public static class ApplicationModule
         services.AddScoped<ICategoryAppService, CategoryAppService>();
         // Quản lý nguyên liệu (sừng trâu, sừng bò...) và nguồn gốc.
         services.AddScoped<IMaterialAppService, MaterialAppService>();
+        // Bộ sưu tập (nhóm sản phẩm do nhân viên chọn, trang /bo-suu-tap).
+        services.AddScoped<ICollectionAppService, CollectionAppService>();
         // Sản phẩm, biến thể, tồn kho.
         services.AddScoped<IProductAppService, ProductAppService>();
         // Giỏ hàng.
