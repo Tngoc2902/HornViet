@@ -29,7 +29,19 @@ public class CollectionDto
     /// <summary>Mã sản phẩm theo đúng thứ tự trong bộ (chỉ trả khi xem chi tiết, phục vụ màn sửa của quản trị).</summary>
     public List<int>? ProductIds { get; set; }
 
+    /// <summary>Sản phẩm trong bộ theo thứ tự (chỉ trả khi xem chi tiết). Khách chỉ thấy sản phẩm đang bán.</summary>
+    public List<CollectionProductDto>? Products { get; set; }
+
     public DateTime CreationTime { get; set; }
+}
+
+public class CollectionProductDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string MainImage { get; set; } = null!;
+    public decimal Price { get; set; }
+    public bool IsActive { get; set; }
 }
 
 public class CreateOrUpdateCollectionInput
@@ -117,8 +129,19 @@ public class CollectionAppService : ICollectionAppService
             query = query.Where(c => c.IsActive);
 
         var dto = await Project(query, manage).FirstOrDefaultAsync() ?? throw new EntityNotFoundException(NotFound);
-        dto.ProductIds = await _itemRepository.GetAll().Where(ci => ci.CollectionId == dto.Id)
-            .OrderBy(ci => ci.DisplayOrder).Select(ci => ci.ProductId).ToListAsync();
+        dto.Products = await _itemRepository.GetAll()
+            .Where(ci => ci.CollectionId == dto.Id && (manage || ci.Product.IsActive))
+            .OrderBy(ci => ci.DisplayOrder)
+            .Select(ci => new CollectionProductDto
+            {
+                Id = ci.ProductId,
+                Name = ci.Product.Name,
+                MainImage = ci.Product.MainImage,
+                Price = ci.Product.Price,
+                IsActive = ci.Product.IsActive
+            })
+            .ToListAsync();
+        dto.ProductIds = dto.Products.Select(p => p.Id).ToList();
         return dto;
     }
 
