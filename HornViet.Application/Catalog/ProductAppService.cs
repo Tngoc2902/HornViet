@@ -32,6 +32,7 @@ public class ProductAppService : IProductAppService
     private readonly IRepository<CartItem, int> _cartItemRepository;
     private readonly IRepository<Order, int> _orderRepository;
     private readonly IRepository<OrderItem, int> _orderItemRepository;
+    private readonly IRepository<CollectionProduct, int> _collectionItemRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAppSession _session;
     private readonly IRealtimeNotifier _notifier;
@@ -43,6 +44,7 @@ public class ProductAppService : IProductAppService
         IRepository<CartItem, int> cartItemRepository,
         IRepository<Order, int> orderRepository,
         IRepository<OrderItem, int> orderItemRepository,
+        IRepository<CollectionProduct, int> collectionItemRepository,
         IUnitOfWork unitOfWork,
         IAppSession session,
         IRealtimeNotifier notifier)
@@ -53,6 +55,7 @@ public class ProductAppService : IProductAppService
         _cartItemRepository = cartItemRepository;
         _orderRepository = orderRepository;
         _orderItemRepository = orderItemRepository;
+        _collectionItemRepository = collectionItemRepository;
         _unitOfWork = unitOfWork;
         _session = session;
         _notifier = notifier;
@@ -76,6 +79,8 @@ public class ProductAppService : IProductAppService
             query = query.Where(p => input.CategoryIds.Contains(p.CategoryId));
         if (input.MaterialIds is { Count: > 0 })
             query = query.Where(p => input.MaterialIds.Contains(p.MaterialId));
+        if (input.CollectionId is { } collectionId)
+            query = query.Where(p => _collectionItemRepository.GetAll().Any(ci => ci.CollectionId == collectionId && ci.ProductId == p.Id));
         if (input.MinPrice.HasValue)
             query = query.Where(p => p.Price >= input.MinPrice.Value);
         if (input.MaxPrice.HasValue)
@@ -96,6 +101,8 @@ public class ProductAppService : IProductAppService
                 .Where(oi => p.Variants.Select(v => v.Id).Contains(oi.ProductVariantId) &&
                              _orderRepository.GetAll().Any(o => o.Id == oi.OrderId && o.Status == OrderStatus.Completed))
                 .Sum(oi => (int?)oi.Quantity) ?? 0),
+            ProductSorting.Featured when input.CollectionId is { } cid => ordered.ThenBy(p => _collectionItemRepository.GetAll()
+                .Where(ci => ci.CollectionId == cid && ci.ProductId == p.Id).Select(ci => ci.DisplayOrder).FirstOrDefault()),
             _ => ordered.ThenByDescending(p => p.CreationTime)
         };
 

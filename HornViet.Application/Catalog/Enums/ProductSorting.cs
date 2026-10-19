@@ -18,5 +18,7 @@ public enum ProductSorting
     /// <summary>Tên A → Z.</summary>
     NameAsc = 3,
     /// <summary>Bán chạy nhất: tổng số lượng đã bán trong các đơn hàng ở trạng thái Hoàn thành, giảm dần.</summary>
-    BestSelling = 4
+    BestSelling = 4,
+    /// <summary>Theo thứ tự nhân viên sắp xếp trong bộ sưu tập (cần kèm CollectionId; không có thì như Newest).</summary>
+    Featured = 5
 }

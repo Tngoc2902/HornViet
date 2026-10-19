@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using HornViet.Application.Common;
+using HornViet.Application.Common;
 using HornViet.Application.Catalog.Enums;
 
 namespace HornViet.Application.Catalog;
@@ -37,6 +37,9 @@ public class GetProductsInput : PagedInput
     /// Null hoặc rỗng = không lọc theo chất liệu.
     /// </summary>
     public List<int>? MaterialIds { get; set; }
+
+    /// <summary>Chỉ lấy sản phẩm thuộc bộ sưu tập này (trang /bo-suu-tap/{slug}). Null = không lọc.</summary>
+    public int? CollectionId { get; set; }
 
     /// <summary>
     /// Giá thấp nhất của khoảng giá. "decimal?" = có thể null (không nhập = không giới hạn dưới).
