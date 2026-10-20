@@ -298,6 +298,15 @@ public class ProductAppService : IProductAppService
         if (duplicate != null)
             throw new UserFriendlyException("Có hai biến thể trùng kích thước và kiểu dáng.");
 
+        // Mỗi biến thể đi với 1 ảnh (chọn trong ảnh đại diện + bộ ảnh của sản phẩm) để khách chọn biến thể nào cũng thấy đúng hình.
+        var productImages = input.Images.Append(input.MainImage).Where(u => !string.IsNullOrWhiteSpace(u)).Select(u => u.Trim()).ToHashSet();
+        var noImage = input.Variants.FirstOrDefault(v => Clean(v.ImageUrl) is not { } u || !productImages.Contains(u));
+        if (noImage != null)
+        {
+            var name = string.Join(" / ", new[] { Clean(noImage.Size), Clean(noImage.Style) }.Where(x => x != null));
+            throw new UserFriendlyException($"Biến thể “{(name.Length > 0 ? name : "Mặc định")}” chưa có ảnh — mỗi biến thể cần chọn 1 ảnh của sản phẩm.");
+        }
+
         if (!await _categoryRepository.GetAll().AnyAsync(c => c.Id == input.CategoryId))
             throw new UserFriendlyException("Danh mục không tồn tại.");
         if (!await _materialRepository.GetAll().AnyAsync(m => m.Id == input.MaterialId))
