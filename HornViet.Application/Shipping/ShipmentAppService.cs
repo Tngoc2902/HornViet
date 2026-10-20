@@ -126,6 +126,8 @@ public class ShipmentAppService : IShipmentAppService
 
     private async Task CreateCoreAsync(Order order, bool moveToShipping)
     {
+        if (order.IsStorePickup)
+            throw new UserFriendlyException($"Đơn {Order.FormatCode(order.Id)} nhận tại cửa hàng, không cần tạo vận đơn.");
         if (!string.IsNullOrEmpty(order.GhnOrderCode))
             throw new UserFriendlyException($"Đơn {Order.FormatCode(order.Id)} đã có vận đơn {order.GhnOrderCode}.");
         if (order.Status is not (OrderStatus.Pending or OrderStatus.Shipping))

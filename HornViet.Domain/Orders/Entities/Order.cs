@@ -12,6 +12,10 @@ public class Order : Entity<int>, IHasCreationTime
     public string ShippingAddress { get; private set; } = null!;
     public decimal TotalAmount { get; private set; }
     public PaymentMethod PaymentMethod { get; private set; }
+
+    /// <summary>Giao tận nơi hay nhận tại cửa hàng — quyết định luồng trạng thái (xem ChangeStatus).</summary>
+    public DeliveryMethod DeliveryMethod { get; private set; }
+
     public string? Note { get; private set; }
     public OrderStatus Status { get; private set; }
     public DateTime CreationTime { get; set; }
@@ -52,7 +56,7 @@ public class Order : Entity<int>, IHasCreationTime
     private Order() { }
 
     public Order(long userId, string receiverName, string phoneNumber, string shippingAddress,
-        PaymentMethod paymentMethod, string? note)
+        PaymentMethod paymentMethod, string? note, DeliveryMethod deliveryMethod = DeliveryMethod.Shipping)
     {
         UserId = userId;
         ReceiverName = receiverName;
@@ -60,8 +64,11 @@ public class Order : Entity<int>, IHasCreationTime
         ShippingAddress = shippingAddress;
         PaymentMethod = paymentMethod;
         Note = note;
+        DeliveryMethod = deliveryMethod;
         Status = OrderStatus.Pending;
     }
+
+    public bool IsStorePickup => DeliveryMethod == DeliveryMethod.StorePickup;
 
     /// <summary>Mã đơn hiển thị cho khách, VD: HSV000123.</summary>
     public static string FormatCode(int id) => $"HSV{id:D6}";
@@ -69,6 +76,8 @@ public class Order : Entity<int>, IHasCreationTime
     /// <summary>Ghi địa chỉ nhận (mã tỉnh / phường của GHN, số nhà) và phí vận chuyển đã được server tính.</summary>
     public void SetShipping(decimal fee, int provinceId, string wardCode, string street)
     {
+        if (IsStorePickup)
+            throw new UserFriendlyException("Đơn nhận tại cửa hàng không có địa chỉ giao hàng.");
         ShippingFee = fee;
         ToProvinceId = provinceId;
         ToWardCode = wardCode;
@@ -79,6 +88,8 @@ public class Order : Entity<int>, IHasCreationTime
     /// <summary>Lưu vận đơn vừa tạo trên GHN.</summary>
     public void AttachShipment(string ghnOrderCode, DateTime? expectedDeliveryTime)
     {
+        if (IsStorePickup)
+            throw new UserFriendlyException($"Đơn {FormatCode(Id)} nhận tại cửa hàng, không cần tạo vận đơn.");
         if (!string.IsNullOrEmpty(GhnOrderCode))
             throw new UserFriendlyException($"Đơn {FormatCode(Id)} đã có vận đơn {GhnOrderCode}.");
         GhnOrderCode = ghnOrderCode;
@@ -123,17 +134,20 @@ public class Order : Entity<int>, IHasCreationTime
     }
 
     /// <summary>
-    /// Chuyển trạng thái theo đúng thứ tự: Pending → Shipping → Completed; hủy được từ Pending hoặc Shipping.
+    /// Chuyển trạng thái theo đúng thứ tự. Giao tận nơi: Pending → Shipping → Completed; nhận tại cửa hàng:
+    /// Pending → ReadyForPickup → Completed. Hủy được trước khi hoàn thành.
     /// Không cho lùi trạng thái hay thay đổi đơn đã kết thúc.
     /// </summary>
     public void ChangeStatus(OrderStatus newStatus)
     {
+        // Bước giữa của từng hình thức: "Đang giao" chỉ cho đơn giao tận nơi, "Chờ khách nhận" chỉ cho đơn nhận tại cửa hàng.
+        var middle = IsStorePickup ? OrderStatus.ReadyForPickup : OrderStatus.Shipping;
         var allowed = (Status, newStatus) switch
         {
-            (OrderStatus.Pending, OrderStatus.Shipping) => true,
-            (OrderStatus.Shipping, OrderStatus.Completed) => true,
+            (OrderStatus.Pending, var s) when s == middle => true,
+            (var s, OrderStatus.Completed) when s == middle => true,
             (OrderStatus.Pending, OrderStatus.Canceled) => true,
-            (OrderStatus.Shipping, OrderStatus.Canceled) => true,
+            (var s, OrderStatus.Canceled) when s == middle => true,
             _ => false
         };
         if (!allowed)
