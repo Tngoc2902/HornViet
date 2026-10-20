@@ -117,6 +117,8 @@ public class ProductVariantDto
     public string? Style { get; set; }
     /// <summary>Tên hiển thị ghép từ Size và Style ("20 cm / Khắc hoa văn"); cả hai trống thì là "Mặc định".</summary>
     public string DisplayName { get; set; } = null!;
+    /// <summary>Ảnh của biến thể — trang chi tiết đổi sang ảnh này khi khách chọn biến thể; null = ảnh đại diện.</summary>
+    public string? ImageUrl { get; set; }
     /// <summary>Số lượng còn trong kho của biến thể này.</summary>
     public int StockQuantity { get; set; }
     /// <summary>
@@ -260,6 +262,10 @@ public class ProductVariantInput
     // Không được có hai biến thể trùng cả (Size, Style) — kiểm tra trong ProductAppService.ValidateAsync.
     [StringLength(100)]
     public string? Style { get; set; }
+
+    /// <summary>Ảnh của biến thể: phải là ảnh đại diện hoặc một ảnh trong bộ ảnh của sản phẩm; khác đi thì bỏ qua.</summary>
+    [StringLength(500)]
+    public string? ImageUrl { get; set; }
 
     /// <summary>
     /// Tồn kho của biến thể. [Range(0, int.MaxValue)]: không được âm → sai thì HTTP 400 "Tồn kho không được âm.".

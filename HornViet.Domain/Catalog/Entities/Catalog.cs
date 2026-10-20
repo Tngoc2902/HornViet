@@ -114,6 +114,11 @@ public class ProductVariant : Entity<int>, ISoftDelete
     public string? Size { get; set; }
     public string? Style { get; set; }
 
+    /// <summary>
+    /// Ảnh hiện khi khách chọn biến thể này (một trong các ảnh của sản phẩm); null = dùng ảnh đại diện của sản phẩm.
+    /// </summary>
+    public string? ImageUrl { get; set; }
+
     public int StockQuantity { get; private set; }
 
     /// <summary>

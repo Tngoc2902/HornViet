@@ -151,7 +151,7 @@ public class CartAppService : ICartAppService
                     ProductVariantId = v.Id,
                     ProductId = v.ProductId,
                     ProductName = v.Product.Name,
-                    MainImage = v.Product.MainImage,
+                    MainImage = v.ImageUrl ?? v.Product.MainImage, // ảnh của biến thể khách đã chọn
                     VariantName = v.DisplayName,
                     Size = v.Size,
                     Style = v.Style,

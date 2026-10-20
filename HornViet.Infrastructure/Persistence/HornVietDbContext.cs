@@ -82,6 +82,7 @@ public class HornVietDbContext : DbContext, IUnitOfWork
             e.ToTable("ProductVariants");
             e.Property(x => x.Size).HasMaxLength(100);
             e.Property(x => x.Style).HasMaxLength(100);
+            e.Property(x => x.ImageUrl).HasMaxLength(500);
             ConfigureConcurrency(e);
             // Giá vốn bình quân giữ 4 chữ số thập phân để phép chia bình quân không làm lệch tổng giá vốn.
             e.Property(x => x.AverageCost).HasPrecision(18, 4);
