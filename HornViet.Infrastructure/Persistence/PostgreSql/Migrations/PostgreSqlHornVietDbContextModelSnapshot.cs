@@ -312,6 +312,10 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 

@@ -15,6 +15,9 @@ public static class AppConsts
     /// <summary>Biến thể có tồn kho &lt;= ngưỡng này được gắn nhãn "Sắp hết hàng" ở trang quản trị.</summary>
     public const int LowStockThreshold = 5;
 
+    /// <summary>Số ảnh tối thiểu (ảnh đại diện + bộ ảnh, không tính trùng) khi thêm sản phẩm mới.</summary>
+    public const int MinProductImages = 3;
+
     /// <summary>
     /// Số bản ghi mặc định trên một trang khi client không truyền kích thước trang (giá trị mặc định của
     /// MaxResultCount trong PagedInput).

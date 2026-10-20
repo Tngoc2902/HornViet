@@ -190,12 +190,16 @@ public class ProductAppService : IProductAppService
     public async Task<ProductDetailDto> CreateAsync(CreateOrUpdateProductInput input)
     {
         await ValidateAsync(input);
+        // Sản phẩm mới phải đủ ảnh để khách xem nhiều góc (sửa sản phẩm cũ thì không bắt buộc).
+        var imageCount = input.Images.Append(input.MainImage).Where(u => !string.IsNullOrWhiteSpace(u)).Select(u => u.Trim()).Distinct().Count();
+        if (imageCount < AppConsts.MinProductImages)
+            throw new UserFriendlyException($"Sản phẩm mới cần tối thiểu {AppConsts.MinProductImages} ảnh (gồm ảnh đại diện), hiện có {imageCount}.");
 
         var product = new Product();
         MapScalarFields(input, product);
-        foreach (var v in input.Variants)
-            product.Variants.Add(new ProductVariant(Clean(v.Size), Clean(v.Style), v.StockQuantity));
         ReplaceImages(product, input.Images);
+        foreach (var v in input.Variants)
+            product.Variants.Add(new ProductVariant(Clean(v.Size), Clean(v.Style), v.StockQuantity) { ImageUrl = VariantImage(product, v.ImageUrl) });
 
         await _productRepository.InsertAsync(product);
         await _unitOfWork.SaveChangesAsync();
@@ -215,6 +219,7 @@ public class ProductAppService : IProductAppService
                       ?? throw new EntityNotFoundException("Không tìm thấy sản phẩm.");
 
         MapScalarFields(input, product);
+        ReplaceImages(product, input.Images); // trước biến thể: ảnh biến thể phải nằm trong bộ ảnh mới
 
         // Đồng bộ biến thể: sửa biến thể có Id, thêm biến thể mới, xóa mềm biến thể bị bỏ đi.
         var keepIds = input.Variants.Where(v => v.Id.HasValue).Select(v => v.Id!.Value).ToHashSet();
@@ -241,15 +246,14 @@ public class ProductAppService : IProductAppService
                 var existing = product.Variants.First(pv => pv.Id == variantId);
                 existing.Size = Clean(v.Size);
                 existing.Style = Clean(v.Style);
+                existing.ImageUrl = VariantImage(product, v.ImageUrl);
                 existing.SetStock(v.StockQuantity);
             }
             else
             {
-                product.Variants.Add(new ProductVariant(Clean(v.Size), Clean(v.Style), v.StockQuantity));
+                product.Variants.Add(new ProductVariant(Clean(v.Size), Clean(v.Style), v.StockQuantity) { ImageUrl = VariantImage(product, v.ImageUrl) });
             }
         }
-
-        ReplaceImages(product, input.Images);
 
         await _unitOfWork.SaveChangesAsync();
         await _notifier.ProductChangedAsync(product.Id); // trang chi tiết đang mở tải lại giá, biến thể, tồn kho
@@ -321,6 +325,13 @@ public class ProductAppService : IProductAppService
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    /// <summary>Ảnh biến thể chỉ nhận ảnh của chính sản phẩm (ảnh đại diện hoặc bộ ảnh); ảnh lạ / đã bị bỏ khỏi bộ → null.</summary>
+    private static string? VariantImage(Product product, string? url)
+    {
+        var u = Clean(url);
+        return u != null && (u == product.MainImage || product.Images.Any(i => i.ImageUrl == u)) ? u : null;
+    }
+
     private static ProductDetailDto ToDetailDto(Product p) => new()
     {
         Id = p.Id,
@@ -347,6 +358,7 @@ public class ProductAppService : IProductAppService
         Size = v.Size,
         Style = v.Style,
         DisplayName = v.DisplayName,
+        ImageUrl = v.ImageUrl,
         StockQuantity = v.StockQuantity,
         InStock = v.StockQuantity > 0,
         IsLowStock = v.StockQuantity <= AppConsts.LowStockThreshold
