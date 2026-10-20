@@ -405,6 +405,9 @@ namespace HornViet.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("DeliveryMethod")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("GhnExpectedDeliveryTime")
                         .HasColumnType("datetime2");
 

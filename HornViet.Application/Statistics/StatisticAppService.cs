@@ -78,6 +78,8 @@ public class DashboardDto
 {
     public int PendingOrderCount { get; set; }
     public int ShippingOrderCount { get; set; }
+    /// <summary>Đơn nhận tại cửa hàng đã chuẩn bị xong, đang chờ khách đến lấy.</summary>
+    public int ReadyForPickupOrderCount { get; set; }
     public int TodayOrderCount { get; set; }
     public int CustomerCount { get; set; }
     /// <summary>Doanh thu chỉ trả về cho Quản trị viên (null với Nhân viên).</summary>
@@ -211,6 +213,7 @@ public class StatisticAppService : IStatisticAppService
         {
             PendingOrderCount = await orders.CountAsync(o => o.Status == OrderStatus.Pending),
             ShippingOrderCount = await orders.CountAsync(o => o.Status == OrderStatus.Shipping),
+            ReadyForPickupOrderCount = await orders.CountAsync(o => o.Status == OrderStatus.ReadyForPickup),
             TodayOrderCount = await orders.CountAsync(o => o.CreationTime >= today),
             CustomerCount = await _userRepository.GetAll().CountAsync(u => u.Roles.Any(r => r.Role.Name == nameof(RoleName.Customer))),
             LowStockVariants = await _variantRepository.GetAll()

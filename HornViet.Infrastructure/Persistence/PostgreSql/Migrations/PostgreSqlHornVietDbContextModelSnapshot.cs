@@ -405,6 +405,9 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<int>("DeliveryMethod")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("GhnExpectedDeliveryTime")
                         .HasColumnType("timestamp without time zone");
 

@@ -22,11 +22,16 @@ public class CreateOrderInput
     [RegularExpression(AppConsts.PhoneRegex, ErrorMessage = "Số điện thoại không hợp lệ.")]
     public string PhoneNumber { get; set; } = null!;
 
+    /// <summary>Giao tận nơi (mặc định) hay nhận tại cửa hàng.</summary>
+    [EnumDataType(typeof(DeliveryMethod), ErrorMessage = "Hình thức nhận hàng không hợp lệ.")]
+    public DeliveryMethod DeliveryMethod { get; set; } = DeliveryMethod.Shipping;
+
     /// <summary>
-    /// Số nhà, tên đường. Khi bật vận chuyển, server ghép thêm phường / quận / tỉnh (tên chuẩn của đơn vị vận chuyển) để thành địa chỉ đầy đủ.
+    /// Số nhà, tên đường — bắt buộc khi giao tận nơi, bỏ qua khi nhận tại cửa hàng. Khi bật vận chuyển, server ghép thêm
+    /// phường / tỉnh (tên chuẩn của đơn vị vận chuyển) để thành địa chỉ đầy đủ.
     /// </summary>
-    [Required(ErrorMessage = "Vui lòng nhập địa chỉ nhận hàng."), StringLength(300)]
-    public string ShippingAddress { get; set; } = null!;
+    [StringLength(300)]
+    public string? ShippingAddress { get; set; }
 
     /// <summary>Tỉnh / thành và phường / xã (danh mục mới 2 cấp của đơn vị vận chuyển) — bắt buộc khi đã bật vận chuyển.</summary>
     public int? ToProvinceId { get; set; }
@@ -57,6 +62,7 @@ public class OrderListItemDto
     public DateTime CreationTime { get; set; }
     public OrderStatus Status { get; set; }
     public PaymentMethod PaymentMethod { get; set; }
+    public DeliveryMethod DeliveryMethod { get; set; }
     /// <summary>Tiền hàng (chưa gồm phí ship).</summary>
     public decimal TotalAmount { get; set; }
     public decimal ShippingFee { get; set; }
@@ -85,6 +91,7 @@ public class OrderDto
     public DateTime CreationTime { get; set; }
     public OrderStatus Status { get; set; }
     public PaymentMethod PaymentMethod { get; set; }
+    public DeliveryMethod DeliveryMethod { get; set; }
     /// <summary>Tiền hàng (chưa gồm phí ship).</summary>
     public decimal TotalAmount { get; set; }
     public decimal ShippingFee { get; set; }
@@ -115,6 +122,9 @@ public class GetMyOrdersInput : PagedInput
 public class GetOrdersInput : PagedInput
 {
     public OrderStatus? Status { get; set; }
+
+    /// <summary>Chỉ đơn giao tận nơi / chỉ đơn nhận tại cửa hàng; null = tất cả.</summary>
+    public DeliveryMethod? DeliveryMethod { get; set; }
 
     /// <summary>Tìm theo mã đơn (HSV000123), tên người nhận hoặc số điện thoại.</summary>
     public string? Keyword { get; set; }
@@ -215,10 +225,13 @@ public class OrderAppService : IOrderAppService
             throw new UserFriendlyException("Một số sản phẩm trong giỏ không đủ hàng, vui lòng cập nhật lại giỏ.",
                 string.Join("\n", problems));
 
-        var street = input.ShippingAddress.Trim();
-        var address = street;
+        var pickup = input.DeliveryMethod == DeliveryMethod.StorePickup;
+        var street = input.ShippingAddress?.Trim() ?? "";
+        if (!pickup && street.Length == 0)
+            throw new UserFriendlyException("Vui lòng nhập địa chỉ nhận hàng.");
+        var address = pickup ? AppConsts.StorePickupAddress : street;
         ShippingQuote? quote = null;
-        if (_shipping.IsEnabled)
+        if (!pickup && _shipping.IsEnabled)
         {
             if (input.ToProvinceId is not > 0 || string.IsNullOrWhiteSpace(input.ToWardCode))
                 throw new UserFriendlyException("Vui lòng chọn tỉnh / thành phố và phường / xã nhận hàng.");
@@ -230,7 +243,7 @@ public class OrderAppService : IOrderAppService
         }
 
         var order = new Order(userId, input.ReceiverName.Trim(), input.PhoneNumber.Trim(),
-            address, input.PaymentMethod, input.Note?.Trim());
+            address, input.PaymentMethod, input.Note?.Trim(), input.DeliveryMethod);
         if (quote != null)
             order.SetShipping(quote.Fee, input.ToProvinceId!.Value, input.ToWardCode!.Trim(), street);
 
@@ -311,6 +324,8 @@ public class OrderAppService : IOrderAppService
 
         if (input.Status.HasValue)
             query = query.Where(o => o.Status == input.Status.Value);
+        if (input.DeliveryMethod.HasValue)
+            query = query.Where(o => o.DeliveryMethod == input.DeliveryMethod.Value);
         if (input.FromDate.HasValue)
             query = query.Where(o => o.CreationTime >= input.FromDate.Value.Date);
         if (input.ToDate.HasValue)
@@ -325,7 +340,10 @@ public class OrderAppService : IOrderAppService
         return await ToPagedListAsync(query, input);
     }
 
-    /// <summary>Chuyển trạng thái theo thứ tự Chờ xử lý → Đang giao → Hoàn thành, hoặc hủy (hoàn tồn kho).</summary>
+    /// <summary>
+    /// Chuyển trạng thái theo thứ tự Chờ xử lý → Đang giao → Hoàn thành (nhận tại cửa hàng: Chờ xử lý → Chờ khách nhận → Hoàn thành),
+    /// hoặc hủy (hoàn tồn kho).
+    /// </summary>
     public async Task<OrderDto> UpdateStatusAsync(UpdateOrderStatusInput input)
     {
         var order = await LoadOrderAsync(input.Id);
@@ -403,7 +421,7 @@ public class OrderAppService : IOrderAppService
             .PageBy(input)
             .Select(o => new
             {
-                o.Id, o.CreationTime, o.Status, o.PaymentMethod, o.TotalAmount, o.ShippingFee, o.GhnOrderCode, o.GhnStatus, o.ReceiverName,
+                o.Id, o.CreationTime, o.Status, o.PaymentMethod, o.DeliveryMethod, o.TotalAmount, o.ShippingFee, o.GhnOrderCode, o.GhnStatus, o.ReceiverName,
                 ItemCount = o.Items.Sum(i => i.Quantity),
                 Lines = o.Items.OrderBy(i => i.Id)
                     .Select(i => new OrderLineSummaryDto { ProductName = i.ProductName, VariantName = i.VariantName, Quantity = i.Quantity })
@@ -418,6 +436,7 @@ public class OrderAppService : IOrderAppService
             CreationTime = o.CreationTime,
             Status = o.Status,
             PaymentMethod = o.PaymentMethod,
+            DeliveryMethod = o.DeliveryMethod,
             TotalAmount = o.TotalAmount,
             ShippingFee = o.ShippingFee,
             PayableAmount = o.TotalAmount + o.ShippingFee,
@@ -445,6 +464,7 @@ public class OrderAppService : IOrderAppService
         CreationTime = o.CreationTime,
         Status = o.Status,
         PaymentMethod = o.PaymentMethod,
+        DeliveryMethod = o.DeliveryMethod,
         TotalAmount = o.TotalAmount,
         ShippingFee = o.ShippingFee,
         PayableAmount = o.PayableAmount,

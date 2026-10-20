@@ -92,4 +92,61 @@ public class OrderTests
     {
         Assert.Equal("HSV000123", Order.FormatCode(123));
     }
+
+    // ---- Nhận tại cửa hàng
+
+    private static Order NewPickupOrder() =>
+        new(userId: 1, receiverName: "Khách test", phoneNumber: "0900000000", shippingAddress: "Nhận tại cửa hàng",
+            paymentMethod: PaymentMethod.COD, note: null, deliveryMethod: DeliveryMethod.StorePickup);
+
+    [Fact]
+    public void Pickup_FollowsPendingReadyForPickupCompleted()
+    {
+        var order = NewPickupOrder();
+
+        order.ChangeStatus(OrderStatus.ReadyForPickup);
+        order.ChangeStatus(OrderStatus.Completed);
+
+        Assert.Equal(OrderStatus.Completed, order.Status);
+        Assert.Equal(0, order.ShippingFee);
+    }
+
+    [Fact]
+    public void Pickup_CannotUseShippingStatus()
+    {
+        var order = NewPickupOrder();
+
+        Assert.Throws<UserFriendlyException>(() => order.ChangeStatus(OrderStatus.Shipping));
+        Assert.Throws<UserFriendlyException>(() => order.ChangeStatus(OrderStatus.Completed));
+    }
+
+    [Fact]
+    public void Shipping_CannotUseReadyForPickup()
+    {
+        var order = NewOrder();
+
+        Assert.Throws<UserFriendlyException>(() => order.ChangeStatus(OrderStatus.ReadyForPickup));
+    }
+
+    [Theory]
+    [InlineData(false)] // hủy khi đang chờ xử lý
+    [InlineData(true)]  // hủy khi hàng đã chuẩn bị, khách chưa đến nhận
+    public void Pickup_CanCancelBeforeCompleted(bool readyFirst)
+    {
+        var order = NewPickupOrder();
+        if (readyFirst) order.ChangeStatus(OrderStatus.ReadyForPickup);
+
+        order.ChangeStatus(OrderStatus.Canceled);
+
+        Assert.Equal(OrderStatus.Canceled, order.Status);
+    }
+
+    [Fact]
+    public void Pickup_HasNoShipment()
+    {
+        var order = NewPickupOrder();
+
+        Assert.Throws<UserFriendlyException>(() => order.SetShipping(30_000, 1, "W1", "Số 1"));
+        Assert.Throws<UserFriendlyException>(() => order.AttachShipment("GHN1", null));
+    }
 }
