@@ -263,7 +263,7 @@ public class ProductVariantInput
     [StringLength(100)]
     public string? Style { get; set; }
 
-    /// <summary>Ảnh của biến thể: phải là ảnh đại diện hoặc một ảnh trong bộ ảnh của sản phẩm; khác đi thì bỏ qua.</summary>
+    /// <summary>Ảnh của biến thể — bắt buộc, phải là ảnh đại diện hoặc một ảnh trong bộ ảnh của sản phẩm.</summary>
     [StringLength(500)]
     public string? ImageUrl { get; set; }
 
