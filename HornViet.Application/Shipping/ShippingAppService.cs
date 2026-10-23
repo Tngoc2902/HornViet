@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using HornViet.Application.Carts;
 using HornViet.Application.Common;
+using HornViet.Domain;
 using HornViet.Domain.SharedKernel;
 
 namespace HornViet.Application.Shipping;
@@ -34,8 +35,14 @@ public class ShippingFeeDto
     /// <summary>false = chưa cấu hình đơn vị vận chuyển: phí ship luôn 0 và form đặt hàng không cần chọn Quận / Phường.</summary>
     public bool IsEnabled { get; set; }
 
-    /// <summary>Phí vận chuyển (đồng) cho giỏ hàng hiện tại.</summary>
+    /// <summary>Phí vận chuyển (đồng) khách phải trả cho giỏ hàng hiện tại (0 khi được miễn phí).</summary>
     public decimal Fee { get; set; }
+
+    /// <summary>Tiền hàng đạt <see cref="FreeShippingThreshold"/> → miễn phí giao hàng.</summary>
+    public bool FreeShipping { get; set; }
+
+    /// <summary>Mức tiền hàng được miễn phí giao hàng (giao diện hiện "mua thêm … để được miễn phí").</summary>
+    public decimal FreeShippingThreshold { get; set; } = AppConsts.FreeShippingThreshold;
 }
 
 public interface IShippingAppService
@@ -62,8 +69,8 @@ public interface IShippingAppService
     Task<(string ProvinceName, string WardName)> ResolveNamesAsync(int provinceId, string wardCode);
 }
 
-/// <summary>Kết quả kiểm tra địa chỉ và phí ship của một đơn.</summary>
-public record ShippingQuote(decimal Fee, string ProvinceName, string WardName);
+/// <summary>Kết quả kiểm tra địa chỉ và phí ship của một đơn. <paramref name="FreeShipping"/>: đơn đủ mức miễn phí (Fee = 0).</summary>
+public record ShippingQuote(decimal Fee, string ProvinceName, string WardName, bool FreeShipping = false);
 
 /// <summary>
 /// Danh mục địa chỉ và phí vận chuyển. Phí ship luôn do server tính từ giỏ hàng — không tin số tiền frontend gửi lên.
@@ -113,7 +120,7 @@ public class ShippingAppService : IShippingAppService
             throw new UserFriendlyException("Giỏ hàng trống hoặc sản phẩm đã hết hàng.");
 
         var quote = await QuoteAsync(input.ToProvinceId, input.ToWardCode, items.Sum(i => i.Quantity), items.Sum(i => i.LineTotal));
-        return new ShippingFeeDto { IsEnabled = true, Fee = quote.Fee };
+        return new ShippingFeeDto { IsEnabled = true, Fee = quote.Fee, FreeShipping = quote.FreeShipping };
     }
 
     public async Task<ShippingQuote> QuoteAsync(int provinceId, string wardCode, int quantity, decimal subTotal)
@@ -125,6 +132,9 @@ public class ShippingAppService : IShippingAppService
 
         // Tên địa chỉ lấy từ danh mục chuẩn và phải khớp nhau — khách không thể ghép phường của tỉnh này với tỉnh khác.
         var (provinceName, wardName) = await ResolveNamesAsync(provinceId, wardCode);
+        // Tiền hàng đủ mức → khách không trả phí ship (cửa hàng trả cước GHN); không cần hỏi giá GHN.
+        if (subTotal >= AppConsts.FreeShippingThreshold)
+            return new ShippingQuote(0, provinceName, wardName, FreeShipping: true);
         var fee = await _provider.CalculateFeeAsync(new ShippingFeeRequest(provinceName, wardName, weight, subTotal));
         return new ShippingQuote(fee.Total, provinceName, wardName);
     }
