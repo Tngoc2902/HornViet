@@ -256,10 +256,34 @@ public partial class ChatBot
         if (found.Count > 1)
             return (intent.Answer, null);
         var product = found[0];
+        if (AskedVariant(product, text) is { } v)
+        {
+            if (v.Stock > 0)
+                return ($"{product.Name} – {v.Name}: còn hàng{(v.Stock <= AppConsts.LowStockThreshold ? $" (chỉ còn {v.Stock})" : "")}.", product.Id);
+            payload.SuggestStaff = true;
+            return ($"{product.Name} – {v.Name} hiện đã hết hàng. Bạn xem các loại khác bên dưới, hoặc bấm “Chat với nhân viên” để hỏi khi nào có hàng lại nhé.",
+                product.Id);
+        }
         if (product.InStock)
             return ($"{product.Name} hiện còn hàng. Tình trạng từng loại:", product.Id);
         payload.SuggestStaff = true;
         return ($"{product.Name} hiện đã hết hàng. Bạn bấm “Chat với nhân viên” để hỏi khi nào có hàng lại nhé.", product.Id);
+    }
+
+    /// <summary>
+    /// Biến thể khách nhắc tới ("còn cỡ 58 không", "mẫu hoa sen còn không"): so các từ riêng của từng biến thể (từ không có
+    /// ở mọi biến thể — "co" trong "Cỡ 56 / Cỡ 58" không tính) với câu hỏi; chỉ trả khi đúng một biến thể khớp nhiều nhất.
+    /// </summary>
+    private static (string Name, int Stock)? AskedVariant(CatalogItem product, string text)
+    {
+        if (product.Variants.Count < 2)
+            return null;
+        var query = ChatText.Tokens(text).ToHashSet();
+        var tokens = product.Variants.Select(v => ChatText.Fold(v.Name).Split(' ', StringSplitOptions.RemoveEmptyEntries)).ToList();
+        var common = tokens.Skip(1).Aggregate(tokens[0].AsEnumerable(), (acc, t) => acc.Intersect(t)).ToHashSet();
+        var scored = product.Variants.Select((v, i) => (Variant: v, Score: tokens[i].Count(t => !common.Contains(t) && query.Contains(t))))
+            .OrderByDescending(x => x.Score).ToList();
+        return scored[0].Score > 0 && scored[0].Score > scored[1].Score ? scored[0].Variant : null;
     }
 
     /// <summary>Sản phẩm khách nhắc tới trong câu; không nhắc tên thì dùng sản phẩm vừa hỏi trước đó.</summary>
