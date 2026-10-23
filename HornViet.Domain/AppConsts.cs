@@ -39,6 +39,12 @@ public static class AppConsts
     /// <summary>Số di động Việt Nam: 0xxxxxxxxx hoặc +84xxxxxxxxx.</summary>
     public const string PhoneRegex = @"^(0|\+84)(3|5|7|8|9)\d{8}$";
 
+    // Chính sách giao hàng: tiền hàng (chưa gồm phí ship) từ mức này trở lên thì khách không trả phí giao hàng — cửa hàng
+    // vẫn trả cước cho đơn vị vận chuyển. Dưới mức này phí ship tính theo địa chỉ như bình thường.
+    // Khớp STORE_INFO.freeShipFrom ở trang khách.
+    /// <summary>Tổng tiền hàng tối thiểu (đồng) để được miễn phí giao hàng.</summary>
+    public const decimal FreeShippingThreshold = 500_000m;
+
     // Đơn "Nhận tại cửa hàng" không có địa chỉ giao: lưu dòng này vào ShippingAddress để danh sách đơn / phiếu in vẫn rõ nơi nhận.
     /// <summary>Nơi khách đến nhận hàng (khớp STORE_INFO.address ở trang khách).</summary>
     public const string StorePickupAddress = "Nhận tại cửa hàng Hồn Sừng Việt – Thụy Ứng, Thường Tín, Hà Nội";

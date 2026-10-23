@@ -182,13 +182,17 @@
     "code": "phi_giao_hang",
     "name": "Phí và thời gian giao hàng",
     "action": "None",
-    "answer": "Cửa hàng giao toàn quốc qua Giao Hàng Nhanh (GHN). Phí giao hàng được tính tự động theo địa chỉ của bạn và hiện ngay ở giỏ hàng trước khi đặt. Thời gian giao: nội thành Hà Nội 1 – 2 ngày làm việc, tỉnh thành khác 2 – 5 ngày làm việc. Mọi sản phẩm đều được bọc chống va đập, đóng hộp và bạn được kiểm tra hàng trước khi nhận. Chọn “Nhận tại cửa hàng” thì không mất phí giao hàng.",
+    "answer": "Cửa hàng giao toàn quốc qua Giao Hàng Nhanh (GHN). Đơn có tiền hàng từ 500.000₫ được miễn phí giao hàng; đơn dưới 500.000₫ thì phí ship tính tự động theo địa chỉ và hiện ngay ở giỏ hàng trước khi đặt. Thời gian giao: nội thành Hà Nội 1 – 2 ngày làm việc, tỉnh thành khác 2 – 5 ngày làm việc. Mọi sản phẩm đều được bọc chống va đập, đóng hộp và bạn được kiểm tra hàng trước khi nhận. Chọn “Nhận tại cửa hàng” thì không mất phí giao hàng.",
+    "replaces": [
+      "Cửa hàng giao toàn quốc qua Giao Hàng Nhanh (GHN). Phí giao hàng được tính tự động theo địa chỉ của bạn và hiện ngay ở giỏ hàng trước khi đặt. Thời gian giao: nội thành Hà Nội 1 – 2 ngày làm việc, tỉnh thành khác 2 – 5 ngày làm việc. Mọi sản phẩm đều được bọc chống va đập, đóng hộp và bạn được kiểm tra hàng trước khi nhận. Chọn “Nhận tại cửa hàng” thì không mất phí giao hàng."
+    ],
     "linkLabel": "Chính sách giao hàng",
     "linkUrl": "/ho-tro#giao-hang",
     "phrases": [
       "phí ship bao nhiêu", "phí giao hàng thế nào", "ship về hà nội bao nhiêu", "ship vào sài gòn mất bao nhiêu tiền",
       "giao hàng mất bao lâu", "bao lâu thì nhận được hàng", "có giao hàng toàn quốc không", "có ship tỉnh không",
-      "ship đi đà nẵng được không", "có freeship không", "miễn phí vận chuyển không", "mua bao nhiêu thì được freeship",
+      "ship đi đà nẵng được không", "có freeship không", "miễn phí vận chuyển không", "mua bao nhiêu thì được freeship", "đơn 500k có được freeship không",
+      "mua trên 500 nghìn có miễn phí ship không", "bao nhiêu tiền thì được miễn phí vận chuyển",
       "phí vận chuyển tính sao", "giao hàng bên nào", "shop gửi hàng qua đơn vị nào", "có giao hỏa tốc không",
       "giao trong ngày được không", "giao nhanh không", "ship cod mất phí không", "tiền ship ai trả", "phi ship", "phi giao hang",
       "ship bn", "ship bao nhiêu tiền", "giao hang mat bao lau", "bao lâu tới", "mấy ngày thì nhận được", "có giao tận nhà không",

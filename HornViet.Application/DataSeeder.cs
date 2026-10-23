@@ -58,17 +58,17 @@ public class DataSeeder
         await SeedChatbotAsync();
     }
 
+    /// <param name="Replaces">Câu trả lời mẫu của các bản seed trước — CSDL còn đúng câu cũ (chưa ai sửa) thì thay bằng câu mới.</param>
     private record SeedIntent(string Code, string Name, ChatIntentAction Action, string Answer, string? LinkLabel, string? LinkUrl,
-        List<string> Phrases);
+        List<string> Phrases, List<string>? Replaces = null);
 
     /// <summary>
     /// Bộ ý định + câu mẫu ban đầu của chatbot (Chat/Seed/chat-intents.json). Chỉ nạp khi chưa có ý định nào — sau đó
-    /// quản trị tự sửa / thêm / xóa ở trang "Huấn luyện chatbot", deploy lại không ghi đè.
+    /// quản trị tự sửa / thêm / xóa ở trang "Huấn luyện chatbot", deploy lại không ghi đè. Ngoại lệ: câu trả lời mẫu đổi
+    /// theo chính sách mới (mục "replaces") được cập nhật nếu CSDL vẫn đang giữ nguyên câu cũ.
     /// </summary>
     private async Task SeedChatbotAsync()
     {
-        if (await _chatIntents.GetAll().AnyAsync())
-            return;
         await using var stream = typeof(DataSeeder).Assembly.GetManifestResourceStream("HornViet.Chat.Seed.chat-intents.json")
                                  ?? throw new InvalidOperationException("Thiếu dữ liệu mẫu chatbot (chat-intents.json).");
         var intents = await JsonSerializer.DeserializeAsync<List<SeedIntent>>(stream, new JsonSerializerOptions
@@ -76,6 +76,19 @@ public class DataSeeder
             PropertyNameCaseInsensitive = true,
             Converters = { new JsonStringEnumConverter() }
         }) ?? [];
+
+        if (await _chatIntents.GetAll().AnyAsync())
+        {
+            foreach (var i in intents.Where(i => i.Replaces is { Count: > 0 }))
+            {
+                var existing = await _chatIntents.GetAll().FirstOrDefaultAsync(x => x.Code == i.Code);
+                if (existing is not null && i.Replaces!.Contains(existing.Answer))
+                    existing.Answer = i.Answer;
+            }
+            await _unitOfWork.SaveChangesAsync();
+            return;
+        }
+
         foreach (var i in intents)
             await _chatIntents.InsertAsync(new ChatIntent
             {
