@@ -1,7 +1,12 @@
+using System.Security.Claims;
+using System.Threading.RateLimiting;
 using HornViet.Api.Authorization;
+using HornViet.Api.Controllers.Chat;
 using HornViet.Api.Middlewares;
+using HornViet.Api.Models;
 using HornViet.Api.Realtime;
 using HornViet.Application;
+using HornViet.Application.Chat;
 using HornViet.Application.Common;
 using HornViet.Infrastructure;
 using HornViet.Infrastructure.Persistence;
@@ -54,6 +59,27 @@ builder.Services.AddJwtAuthentication(config);
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<ConnectionTracker>();
 builder.Services.AddSingleton<IRealtimeNotifier, SignalRNotifier>();
+// Ô chat báo khách "nhân viên sẽ trả lời ngay" khi đang có nhân viên mở trang quản trị.
+builder.Services.AddSingleton<IStaffPresence>(sp => sp.GetRequiredService<ConnectionTracker>());
+
+// Giới hạn tần suất cho ô chat công khai (chống spam / gửi tự động): mỗi tài khoản, hoặc mỗi địa chỉ IP với khách vãng lai,
+// tối đa 20 lần gửi tin / gọi nhân viên mỗi phút; vượt quá trả HTTP 429 theo định dạng AjaxResponse.
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.OnRejected = (ctx, ct) => new ValueTask(ctx.HttpContext.Response.WriteAsJsonAsync(
+        AjaxResponse.Fail("Bạn gửi tin nhắn hơi nhanh, vui lòng chờ một chút rồi thử lại."), ct));
+    o.AddPolicy(ChatController.RateLimitPolicy, http =>
+    {
+        // Render đứng sau proxy: IP thật của khách ở phần tử đầu của X-Forwarded-For.
+        var forwarded = http.Request.Headers["X-Forwarded-For"].ToString().Split(',')[0].Trim();
+        var key = http.User.FindFirstValue(ClaimTypes.NameIdentifier) is { } userId
+            ? $"user:{userId}"
+            : $"ip:{(forwarded.Length > 0 ? forwarded : http.Connection.RemoteIpAddress?.ToString())}";
+        return RateLimitPartition.GetFixedWindowLimiter(key,
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
+    });
+});
 
 // Bước 4 – Đăng ký MVC Controllers:
 //   - Filters.Add<WrapResultFilter>(): bộ lọc toàn cục bọc mọi kết quả thành công của controller vào AjaxResponse
@@ -119,6 +145,9 @@ else if (!smtp.SendsRealEmail)
     app.Logger.LogInformation("Smtp:Host trống — email Quên mật khẩu được lưu thành file .eml trong {Directory}",
         Path.GetFullPath(smtp.PickupDirectory));
 
+app.Logger.LogInformation("Chatbot: {Mode}", app.Services.GetRequiredService<IChatAssistant>().IsEnabled
+    ? "model tự huấn luyện + Gemini cho câu chưa hiểu"
+    : "chỉ model tự huấn luyện (Gemini:ApiKey trống)");
 app.Logger.LogInformation("Lưu ảnh tải lên: {Storage}",
     app.Services.GetRequiredService<IFileStorage>() is CloudinaryFileStorage ? "Cloudinary" : "wwwroot/uploads của máy chủ");
 
@@ -148,11 +177,27 @@ app.UseStaticFiles(); // wwwroot/uploads — ảnh sản phẩm
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 app.MapHub<NotificationHub>(NotificationHub.Path);
 app.MapHealthChecks("/health");
 // Trang gốc: mở địa chỉ backend trên trình duyệt thấy thông tin API thay vì lỗi 404 (backend không có giao diện).
 app.MapGet("/", () => Results.Ok(new { service = "Hồn Sừng Việt API", environment = app.Environment.EnvironmentName, health = "/health" }));
+
+// Nạp sẵn model chatbot sau khi khởi động (CSDL mới thì huấn luyện lần đầu từ câu mẫu) để khách nhắn tin đầu tiên
+// không phải chờ. Chạy nền — lỗi chỉ ghi log, tin nhắn đầu tiên sẽ thử nạp lại.
+app.Lifetime.ApplicationStarted.Register(() => _ = Task.Run(async () =>
+{
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<ChatModelManager>().EnsureLoadedAsync();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "Chưa nạp được model chatbot lúc khởi động.");
+    }
+}));
 
 app.Run();
 

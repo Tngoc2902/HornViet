@@ -45,6 +45,9 @@ services:
         sync: false
       - key: Google__ClientId
         sync: false
+      # Chatbot: khóa Gemini (Google AI Studio) để AI trả lời câu bot tự huấn luyện chưa hiểu; để trống = tắt.
+      - key: Gemini__ApiKey
+        sync: false
       - key: Cloudinary__Url
         sync: false
       - key: Email__Provider

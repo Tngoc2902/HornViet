@@ -1,3 +1,4 @@
+using HornViet.Application.Chat;
 using HornViet.Application.Common;
 using HornViet.Domain;
 using Microsoft.AspNetCore.SignalR;
@@ -72,6 +73,13 @@ public class SignalRNotifier : IRealtimeNotifier
                 _tracker.Remove(c.ConnectionId);
             }
         });
+
+    public Task ChatMessageAsync(int conversationId, ChatMessageDto message) => SafeAsync(nameof(ChatMessageAsync), () =>
+        _hub.Clients.Group(NotificationHub.ChatGroup(conversationId)).ChatMessage(new ChatMessageMessage(conversationId, message)));
+
+    public Task ChatConversationChangedAsync(ChatConversationChangedEvent e) => SafeAsync(nameof(ChatConversationChangedAsync), () =>
+        _hub.Clients.Groups(NotificationHub.ChatGroup(e.ConversationId), NotificationHub.ManagementGroup)
+            .ChatConversationChanged(new ChatConversationChangedMessage(e.ConversationId, (int)e.Status, e.StaffUnread, e.StaffUserId)));
 
     private async Task SafeAsync(string operation, Func<Task> send)
     {

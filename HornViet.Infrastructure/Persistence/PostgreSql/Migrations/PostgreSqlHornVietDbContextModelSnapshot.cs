@@ -346,6 +346,220 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                     b.ToTable("ProductVariants", (string)null);
                 });
 
+            modelBuilder.Entity("HornViet.Domain.Chat.Entities.ChatConversation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("GuestKey")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("LastMessageTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("LastProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("StaffUnread")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("StaffUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StaffUserId");
+
+                    b.HasIndex("Status", "LastMessageTime");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("ChatConversations", (string)null);
+                });
+
+            modelBuilder.Entity("HornViet.Domain.Chat.Entities.ChatIntent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Action")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Answer")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("LinkLabel")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("LinkUrl")
+                        .HasMaxLength(300)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("ChatIntents", (string)null);
+                });
+
+            modelBuilder.Entity("HornViet.Domain.Chat.Entities.ChatMessage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<double?>("Confidence")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("ConversationId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("IntentCode")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("NeedsReview")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Payload")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Sender")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("StaffUserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId", "Id");
+
+                    b.HasIndex("NeedsReview", "Id");
+
+                    b.ToTable("ChatMessages", (string)null);
+                });
+
+            modelBuilder.Entity("HornViet.Domain.Chat.Entities.ChatModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<double>("Accuracy")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long?>("CreatorUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("DataHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<int>("IntentCount")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("MacroAccuracy")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("PhraseCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Report")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ChatModels", (string)null);
+                });
+
+            modelBuilder.Entity("HornViet.Domain.Chat.Entities.ChatPhrase", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("IntentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IntentId");
+
+                    b.ToTable("ChatPhrases", (string)null);
+                });
+
             modelBuilder.Entity("HornViet.Domain.Inventory.Entities.StockReceipt", b =>
                 {
                     b.Property<int>("Id")
@@ -848,6 +1062,37 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("HornViet.Domain.Chat.Entities.ChatConversation", b =>
+                {
+                    b.HasOne("HornViet.Domain.Users.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("StaffUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("HornViet.Domain.Users.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("HornViet.Domain.Chat.Entities.ChatMessage", b =>
+                {
+                    b.HasOne("HornViet.Domain.Chat.Entities.ChatConversation", null)
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HornViet.Domain.Chat.Entities.ChatPhrase", b =>
+                {
+                    b.HasOne("HornViet.Domain.Chat.Entities.ChatIntent", null)
+                        .WithMany("Phrases")
+                        .HasForeignKey("IntentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("HornViet.Domain.Inventory.Entities.StockReceipt", b =>
                 {
                     b.HasOne("HornViet.Domain.Users.Entities.User", null)
@@ -939,6 +1184,16 @@ namespace HornViet.Infrastructure.Persistence.PostgreSql.Migrations
                     b.Navigation("Images");
 
                     b.Navigation("Variants");
+                });
+
+            modelBuilder.Entity("HornViet.Domain.Chat.Entities.ChatConversation", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("HornViet.Domain.Chat.Entities.ChatIntent", b =>
+                {
+                    b.Navigation("Phrases");
                 });
 
             modelBuilder.Entity("HornViet.Domain.Orders.Entities.Order", b =>

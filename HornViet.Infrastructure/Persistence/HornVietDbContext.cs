@@ -3,6 +3,7 @@ using System.Reflection;
 using HornViet.Application.Common;
 using HornViet.Domain.Carts.Entities;
 using HornViet.Domain.Catalog.Entities;
+using HornViet.Domain.Chat.Entities;
 using HornViet.Domain.Interfaces.Repositories;
 using HornViet.Domain.Inventory.Entities;
 using HornViet.Domain.Orders.Entities;
@@ -38,6 +39,11 @@ public class HornVietDbContext : DbContext, IUnitOfWork
     public DbSet<UserAddress> UserAddresses => Set<UserAddress>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<StockReceipt> StockReceipts => Set<StockReceipt>();
+    public DbSet<ChatIntent> ChatIntents => Set<ChatIntent>();
+    public DbSet<ChatPhrase> ChatPhrases => Set<ChatPhrase>();
+    public DbSet<ChatModel> ChatModels => Set<ChatModel>();
+    public DbSet<ChatConversation> ChatConversations => Set<ChatConversation>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -232,6 +238,54 @@ public class HornVietDbContext : DbContext, IUnitOfWork
             e.HasIndex(x => x.TokenHash).IsUnique();
             e.HasIndex(x => new { x.UserId, x.CreationTime });
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Chatbot: ý định + câu mẫu (dữ liệu huấn luyện), model đã huấn luyện, hội thoại hỗ trợ và tin nhắn.
+        b.Entity<ChatIntent>(e =>
+        {
+            e.ToTable("ChatIntents");
+            e.Property(x => x.Code).HasMaxLength(64).IsUnicode(false).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(128).IsRequired();
+            e.Property(x => x.Answer).HasMaxLength(2000).IsRequired();
+            e.Property(x => x.LinkLabel).HasMaxLength(64);
+            e.Property(x => x.LinkUrl).HasMaxLength(300).IsUnicode(false);
+            e.Property(x => x.IsActive).HasDefaultValue(true);
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasMany(x => x.Phrases).WithOne().HasForeignKey(p => p.IntentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<ChatPhrase>(e =>
+        {
+            e.ToTable("ChatPhrases");
+            e.Property(x => x.Text).HasMaxLength(300).IsRequired();
+        });
+
+        b.Entity<ChatModel>(e =>
+        {
+            e.ToTable("ChatModels");
+            e.Property(x => x.Data).IsRequired();
+            e.Property(x => x.DataHash).HasMaxLength(64).IsUnicode(false).IsFixedLength().IsRequired();
+            e.Property(x => x.Report).IsRequired();
+        });
+
+        b.Entity<ChatConversation>(e =>
+        {
+            e.ToTable("ChatConversations");
+            e.Property(x => x.GuestKey).HasMaxLength(64).IsUnicode(false);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.StaffUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasMany(x => x.Messages).WithOne().HasForeignKey(m => m.ConversationId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.UserId, x.Status });
+            e.HasIndex(x => new { x.Status, x.LastMessageTime });
+        });
+
+        b.Entity<ChatMessage>(e =>
+        {
+            e.ToTable("ChatMessages");
+            e.Property(x => x.Content).HasMaxLength(2000).IsRequired();
+            e.Property(x => x.IntentCode).HasMaxLength(64).IsUnicode(false);
+            e.HasIndex(x => new { x.ConversationId, x.Id });
+            e.HasIndex(x => new { x.NeedsReview, x.Id }); // danh sách "Câu bot chưa hiểu"
         });
 
         // Hệ thống lưu giờ địa phương (giờ Việt Nam); đánh dấu Kind = Local khi đọc ra để JSON luôn có offset +07:00.

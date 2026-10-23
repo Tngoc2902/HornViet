@@ -1,6 +1,7 @@
 using HornViet.Application.Shipping;
 using HornViet.Application.Accounts;
 using HornViet.Application.Carts;
+using HornViet.Application.Chat;
 using HornViet.Application.Catalog;
 using HornViet.Application.Inventory;
 using HornViet.Application.Orders;
@@ -63,6 +64,12 @@ public static class ApplicationModule
         services.AddScoped<IStockReceiptAppService, StockReceiptAppService>();
         services.AddScoped<IShippingAppService, ShippingAppService>();
         services.AddScoped<IShipmentAppService, ShipmentAppService>();
+        // Chatbot: bot trả lời khách, chuyển sang nhân viên, huấn luyện model nhận diện ý định.
+        services.AddScoped<ChatModelManager>();
+        services.AddScoped<ChatBot>();
+        services.AddScoped<IChatbotAppService, ChatbotAppService>();
+        services.AddScoped<IChatSupportAppService, ChatSupportAppService>();
+        services.AddScoped<IChatTrainingAppService, ChatTrainingAppService>();
         // DataSeeder đăng ký trực tiếp theo lớp (không qua interface) vì chỉ Program.cs dùng nó lúc khởi động
         // để tạo dữ liệu ban đầu.
         services.AddScoped<DataSeeder>();
