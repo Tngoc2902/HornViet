@@ -19,4 +19,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Bộ ý định + câu mẫu ban đầu của chatbot (DataSeeder nạp khi bảng ChatIntents còn trống). -->
+    <EmbeddedResource Include="Chat/Seed/chat-intents.json" LogicalName="HornViet.Chat.Seed.chat-intents.json" />
+  </ItemGroup>
+
 </Project>

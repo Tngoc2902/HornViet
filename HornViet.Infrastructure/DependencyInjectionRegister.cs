@@ -22,7 +22,21 @@ public static class DependencyInjectionRegister
             .AddPersistence(connectionString, configuration["Database:Provider"])
             .AddEmail(configuration)
             .AddGoogleAuth(configuration)
-            .AddShipping(configuration);
+            .AddShipping(configuration)
+            .AddChatbot(configuration);
+    }
+
+    /// <summary>
+    /// Chatbot: model nhận diện ý định (ML.NET) — singleton vì model đã nạp nằm trong bộ nhớ và dùng chung cho mọi request;
+    /// model được lưu trong CSDL (ChatModels) và nạp lại khi tiến trình khởi động lại. Trợ lý AI Gemini (mục "Gemini")
+    /// trả lời câu model chưa hiểu; Gemini:ApiKey trống thì tắt.
+    /// </summary>
+    public static IServiceCollection AddChatbot(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddSingleton<IIntentEngine, MlNetIntentEngine>();
+        services.Configure<GeminiOptions>(configuration.GetSection("Gemini"));
+        services.AddHttpClient<IChatAssistant, GeminiChatAssistant>(http => http.Timeout = TimeSpan.FromSeconds(20));
+        return services;
     }
 
     /// <summary>

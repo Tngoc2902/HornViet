@@ -1,0 +1,377 @@
+[
+  {
+    "code": "chao_hoi",
+    "name": "Chào hỏi",
+    "action": "None",
+    "answer": "Xin chào! Mình là trợ lý tự động của Hồn Sừng Việt. Bạn cần tìm sản phẩm, hỏi giá, phí giao hàng hay tra đơn hàng? Cần gặp người thật thì bấm “Chat với nhân viên” nhé.",
+    "phrases": [
+      "xin chào", "chào shop", "hello shop", "hi shop", "alo shop ơi", "shop ơi", "chào bạn", "chào ad", "xin chào cửa hàng",
+      "hi", "hello", "chào buổi sáng", "chào buổi tối shop", "shop có ở đó không", "ad ơi", "alo alo", "chào em", "chào anh",
+      "chào chị", "xin chao", "chao shop", "shop oi", "hey shop", "e chào shop ạ", "dạ chào shop", "chào shop nha",
+      "shop ơi cho mình hỏi chút", "cho mình hỏi", "cho em hỏi xíu", "mình muốn hỏi một chút", "tư vấn giúp mình với",
+      "tu van giup minh", "shop tư vấn cho em với", "good morning", "chào cả nhà", "hi ad", "helo", "chào, mình cần hỏi",
+      "alo", "chao ban", "hello ad oi", "xin chào, cho hỏi chút"
+    ]
+  },
+  {
+    "code": "cam_on_tam_biet",
+    "name": "Cảm ơn, tạm biệt",
+    "action": "None",
+    "answer": "Cảm ơn bạn đã ghé Hồn Sừng Việt! Khi cần, bạn cứ nhắn mình bất cứ lúc nào nhé.",
+    "phrases": [
+      "cảm ơn", "cảm ơn shop", "cám ơn bạn", "thanks", "thank you", "tks shop", "ok cảm ơn", "oke shop", "ok shop nhé",
+      "vâng ạ", "dạ vâng", "được rồi cảm ơn", "mình hiểu rồi", "ok mình biết rồi", "tạm biệt", "bye", "bai shop",
+      "hẹn gặp lại", "cảm ơn nhiều", "cảm ơn shop nhiều nha", "thank shop", "camon", "cam on ban", "ok thanks",
+      "tuyệt vời cảm ơn", "vậy được rồi", "thôi mình cảm ơn", "dạ em cảm ơn", "ok nha", "cảm ơn đã tư vấn",
+      "ok để mình suy nghĩ thêm", "mình sẽ cân nhắc", "để mình xem đã", "ok chào shop", "bye bye", "good bye",
+      "cảm ơn ad", "oki", "tks", "thanks ad", "vang cam on", "ok minh hieu roi"
+    ]
+  },
+  {
+    "code": "tim_san_pham",
+    "name": "Tìm sản phẩm",
+    "action": "SearchProducts",
+    "answer": "Bạn xem thử các sản phẩm này nhé:",
+    "phrases": [
+      "shop có những sản phẩm gì", "shop bán những gì", "có bán lược sừng không", "mình muốn mua lược sừng", "tìm vòng tay sừng",
+      "có vòng tay sừng trâu không", "có nhẫn sừng không", "shop có trâm cài tóc không", "mình cần mua quà tặng bằng sừng",
+      "có đồ trang trí bằng sừng không", "cho xem mẫu lược", "cho mình xem các mẫu vòng tay", "có móc khóa sừng không",
+      "muốn tìm thìa sừng", "có đũa sừng không", "có bán đồ gia dụng bằng sừng không", "tìm sản phẩm sừng bò",
+      "có sản phẩm nào bằng sừng trâu không", "gợi ý cho mình vài sản phẩm", "sản phẩm nào bán chạy nhất", "có mẫu nào mới không",
+      "cho xem hàng mới về", "mình muốn xem lược sừng chạm khắc", "có lược bỏ túi không", "tìm quà tặng cho bố",
+      "quà tặng mẹ bằng sừng", "có gì làm quà không shop", "shop co ban luoc sung khong", "tim vong tay sung", "co nhan sung ko",
+      "sp nào rẻ nhất", "sản phẩm nào đắt nhất", "có gì dưới 200k không", "sản phẩm dưới 500 nghìn", "có lược nào dưới 150k không",
+      "vòng tay tầm 300k", "có món nào khoảng 100k không", "đồ trang trí từ 500k đến 1 triệu", "mình muốn mua vòng tay",
+      "lược chải tóc bằng sừng", "có bán cốc sừng không", "tượng sừng trang trí", "có bút sừng không", "có hộp đựng bằng sừng không",
+      "shop có những loại lược nào", "có những mẫu trâm nào", "mình đang tìm một món quà nhỏ", "có sản phẩm cho nam không",
+      "có gì cho nữ không", "có đồ cho trẻ em không", "xem tất cả sản phẩm", "danh mục sản phẩm", "có mặt hàng gì",
+      "shop kinh doanh mặt hàng gì", "có kẹp tóc sừng không", "muốn mua móc khóa làm quà", "lược sừng trâu răng thưa",
+      "tìm lược sừng bò", "vòng tay sừng trơn", "trâm cài hoa sen", "có gì rẻ rẻ không", "đồ dưới 1tr", "co mon nao duoi 100k",
+      "tìm đồ trang trí phòng khách", "có bán thìa ăn cơm bằng sừng không"
+    ]
+  },
+  {
+    "code": "hoi_gia",
+    "name": "Hỏi giá",
+    "action": "ProductPrice",
+    "answer": "Giá các sản phẩm bạn hỏi đây ạ:",
+    "phrases": [
+      "lược sừng giá bao nhiêu", "vòng tay sừng bao nhiêu tiền", "giá trâm cài sừng thế nào", "cái này giá bao nhiêu",
+      "sản phẩm này bao nhiêu tiền", "bao nhiêu tiền vậy shop", "giá bao nhiêu", "giá sao shop", "bn tiền", "bn vậy shop",
+      "luoc sung bao nhieu tien", "vong tay gia bao nhieu", "nhẫn sừng giá thế nào", "móc khóa sừng giá bao nhiêu",
+      "thìa sừng bao nhiêu một cái", "lược sừng trâu chạm khắc giá bao nhiêu", "giá lược bỏ túi", "hỏi giá vòng tay sừng trơn",
+      "cho mình xin giá lược", "báo giá giúp mình", "cho em xin báo giá", "giá của trâm cài hoa sen", "giá cả thế nào",
+      "mắc không shop", "có đắt không", "giá có rẻ không", "cái lược này nhiêu", "nhiêu tiền vậy", "bao nhiêu 1 chiếc",
+      "giá 1 cái bao nhiêu", "giá bán lẻ bao nhiêu", "bao nhiêu tiền 1 đôi đũa", "đũa sừng giá bao nhiêu", "giá vòng cỡ 58",
+      "tầm giá bao nhiêu", "gia bn", "bao nhiu tien", "giá bao nhiu", "giá ntn", "bao nhiêu thế ạ", "cho hỏi giá",
+      "hỏi giá sản phẩm", "mình muốn biết giá", "giá tiền thế nào ạ", "giá lược sừng", "giá vòng tay", "giá nhẫn",
+      "giá móc khóa", "giá thìa", "giá trâm", "xin giá", "cái đó giá bao nhiêu", "món này nhiêu tiền shop", "gia luoc sung trau",
+      "shop ơi cho mình hỏi giá", "cho mình hỏi giá lược sừng trâu", "hỏi giá vòng tay với shop", "cho em hỏi giá cái trâm"
+    ]
+  },
+  {
+    "code": "con_hang",
+    "name": "Còn hàng, kích cỡ",
+    "action": "ProductStock",
+    "answer": "Tình trạng hàng của các sản phẩm bạn hỏi:",
+    "phrases": [
+      "còn hàng không", "lược sừng còn hàng không", "vòng tay còn không shop", "còn size 58 không", "còn cỡ 56 không",
+      "mẫu này hết hàng chưa", "còn bao nhiêu cái", "sản phẩm này còn không", "trâm cài hoa sen còn không", "có sẵn hàng không",
+      "hàng có sẵn không shop", "khi nào có hàng lại", "bao giờ có hàng", "hết hàng rồi à", "con hang ko", "con khong shop",
+      "con size nao", "còn những size nào", "còn màu nào", "còn mẫu nào", "lược sừng trâu chạm khắc còn cỡ lớn không",
+      "còn loại răng dày không", "vòng tay sừng trơn còn cỡ 60 không", "móc khóa cá chép còn không", "còn hàng để giao ngay không",
+      "có hàng sẵn ở cửa hàng không", "mình muốn mua 5 cái còn đủ không", "còn đủ số lượng không", "sp này còn ko", "còn ko ad",
+      "kiểm tra giúp mình còn hàng không", "check hàng giúp em", "tồn kho còn bao nhiêu", "có size nhỏ không", "có cỡ lớn không",
+      "có size to hơn không", "còn mẫu chim lạc không", "thìa sừng còn không", "lược bỏ túi còn hàng không", "hàng về chưa shop",
+      "đã có hàng lại chưa", "cỡ vừa còn không", "còn không ạ", "còn hàng k", "cái này còn không", "hết size rồi hả",
+      "con hang khong ad", "còn cỡ nhỏ không shop"
+    ]
+  },
+  {
+    "code": "bo_suu_tap",
+    "name": "Bộ sưu tập",
+    "action": "Collections",
+    "answer": "Các bộ sưu tập đang có tại Hồn Sừng Việt:",
+    "phrases": [
+      "shop có bộ sưu tập nào", "xem bộ sưu tập", "bộ sưu tập mới", "có bộ sưu tập quà tặng không", "bộ sưu tập tết",
+      "collection mới", "bst mới nhất", "các bộ sưu tập của shop", "cho xem các bộ sưu tập", "bo suu tap",
+      "bộ sưu tập nào đang hot", "có combo quà tặng không", "bộ quà tặng", "set quà tặng bằng sừng", "bộ sưu tập dành cho nam",
+      "bst cho nữ", "có bộ sưu tập theo chủ đề không", "xem collection", "có những dòng sản phẩm nào", "dòng sản phẩm cao cấp",
+      "các dòng sản phẩm", "có bộ sưu tập giới hạn không", "bst", "bo suu tap moi", "bộ sưu tập quà biếu",
+      "bộ sưu tập đồ trang trí", "bộ sưu tập lược", "shop có mấy bộ sưu tập", "sưu tập đặc biệt", "mẫu theo mùa",
+      "bộ sưu tập năm nay", "xem các bst", "co bo suu tap nao khong"
+    ]
+  },
+  {
+    "code": "tra_don",
+    "name": "Tra cứu đơn hàng",
+    "action": "MyOrders",
+    "answer": "Đây là các đơn hàng gần đây của bạn:",
+    "phrases": [
+      "đơn hàng của tôi đến đâu rồi", "kiểm tra đơn hàng", "tra cứu đơn hàng", "đơn của mình giao chưa",
+      "bao giờ đơn hàng của tôi được giao", "đơn hàng đang ở đâu", "xem trạng thái đơn", "tình trạng đơn hàng",
+      "đơn HSV000123 đến đâu rồi", "kiểm tra đơn hsv000045", "mã đơn hsv 12", "đơn của em đã gửi chưa", "shop đã gửi hàng chưa",
+      "khi nào nhận được hàng", "bao lâu nữa thì nhận được hàng", "đơn hàng của tôi đã xác nhận chưa", "đơn đặt hôm qua sao chưa thấy",
+      "mình đặt hàng rồi mà chưa thấy gì", "đã đặt hàng thành công chưa", "theo dõi đơn hàng", "tra đơn", "check đơn giúp mình",
+      "check don", "don hang cua toi", "kiem tra don hang", "xem đơn hàng đã đặt", "lịch sử mua hàng", "các đơn mình đã mua",
+      "đơn gần nhất của tôi", "đơn hàng của em giao tới đâu rồi", "shipper giao chưa", "hàng đi tới đâu rồi",
+      "mã vận đơn của tôi là gì", "đơn đã đóng gói chưa", "đơn của mình sẵn sàng nhận chưa", "hàng đã chuẩn bị xong để qua lấy chưa",
+      "đơn nhận tại cửa hàng đã chuẩn bị xong chưa", "mình muốn biết đơn hàng của mình", "tôi muốn kiểm tra đơn", "đơn hàng số 25",
+      "don so 30 sao roi", "trạng thái đơn hàng hsv000007", "mình chưa nhận được hàng", "hàng giao chậm quá",
+      "sao lâu vậy chưa nhận được", "đơn hàng bị chậm", "đã thanh toán rồi đơn sao rồi", "tôi đã chuyển khoản, đơn thế nào rồi",
+      "đơn hàng mình đặt tuần trước", "đơn của tôi", "xem đơn của mình"
+    ]
+  },
+  {
+    "code": "huy_sua_don",
+    "name": "Hủy, sửa đơn hàng",
+    "action": "None",
+    "answer": "Đơn đang “Chờ xử lý” bạn tự hủy được ở mục “Đơn hàng của tôi” (mở đơn → Hủy đơn). Đơn đã chuyển sang “Đang giao”, hoặc cần đổi địa chỉ, số điện thoại, sản phẩm trong đơn, bạn gọi hotline 0967 459 238 hoặc bấm “Chat với nhân viên” để được hỗ trợ nhé.",
+    "linkLabel": "Đơn hàng của tôi",
+    "linkUrl": "/account/orders",
+    "phrases": [
+      "hủy đơn hàng", "muốn hủy đơn", "làm sao để hủy đơn", "huỷ đơn giúp mình", "mình đặt nhầm muốn hủy",
+      "cho mình hủy đơn hsv000010", "hủy đơn được không", "có hủy đơn được không shop", "đổi địa chỉ giao hàng",
+      "sửa địa chỉ nhận hàng", "mình muốn đổi số điện thoại trong đơn", "đổi sản phẩm trong đơn", "thêm sản phẩm vào đơn đã đặt",
+      "mình muốn đặt thêm vào đơn cũ", "sửa đơn hàng", "chỉnh sửa đơn", "thay đổi thông tin đơn hàng", "đặt nhầm size muốn đổi",
+      "đặt nhầm màu", "đổi phương thức thanh toán", "muốn chuyển sang nhận tại cửa hàng", "đổi từ giao hàng sang nhận tại shop",
+      "huy don", "huy don hang", "sua dia chi", "doi dia chi giao hang", "không muốn mua nữa", "thôi không lấy nữa",
+      "mình không cần đơn này nữa", "hủy giúp em đơn vừa đặt", "đơn đang giao có hủy được không", "đổi tên người nhận",
+      "giao hàng sang địa chỉ khác", "ghi chú thêm cho đơn hàng", "muốn đổi ngày giao", "hoãn giao hàng", "đơn bị sai thông tin",
+      "cancel đơn"
+    ]
+  },
+  {
+    "code": "huong_dan_dat_hang",
+    "name": "Cách đặt hàng",
+    "action": "None",
+    "answer": "Cách đặt hàng: 1) Chọn sản phẩm, chọn kích thước / kiểu dáng rồi bấm “Thêm vào giỏ hàng” hoặc “Đặt mua”; 2) Đăng nhập hoặc tạo tài khoản; 3) Vào giỏ hàng, chọn “Giao tận nơi” hoặc “Nhận tại cửa hàng”; 4) Chọn cách thanh toán rồi bấm “Đặt hàng”. Đặt xong bạn theo dõi đơn ở mục “Đơn hàng của tôi”.",
+    "linkLabel": "Hướng dẫn mua hàng",
+    "linkUrl": "/ho-tro#mua-hang",
+    "phrases": [
+      "làm sao để đặt hàng", "cách mua hàng trên web", "hướng dẫn đặt hàng", "đặt hàng như thế nào", "mua hàng thế nào",
+      "mình muốn đặt mua", "đặt mua ở đâu", "cách thêm vào giỏ hàng", "không đặt được hàng", "đặt hàng có cần đăng nhập không",
+      "không có tài khoản có mua được không", "mua không cần tài khoản được không", "đặt online được không", "có đặt qua web được không",
+      "muốn mua thì làm gì", "làm thế nào để mua", "cach dat hang", "huong dan mua hang", "mua hang nhu the nao", "dat hang o dau",
+      "đặt hàng qua điện thoại được không", "đặt qua zalo được không", "có thể đặt qua facebook không", "mình muốn chốt đơn",
+      "chốt đơn giúp mình", "lên đơn giúp em", "em muốn lấy 1 cái", "mình lấy cái này", "mình mua 2 cái nhé", "đặt cho mình 1 chiếc",
+      "mua nhiều có được không", "giỏ hàng ở đâu", "nút đặt hàng ở đâu", "mua bằng điện thoại được không", "đặt trước được không",
+      "có cần tài khoản không", "quy trình mua hàng", "chot don"
+    ]
+  },
+  {
+    "code": "thanh_toan",
+    "name": "Thanh toán",
+    "action": "None",
+    "answer": "Cửa hàng nhận 2 cách thanh toán: trả tiền khi nhận hàng (COD) và chuyển khoản ngân hàng. Chọn “Nhận tại cửa hàng” thì bạn trả tiền mặt hoặc chuyển khoản khi đến nhận. Thông tin chuyển khoản kèm mã QR hiện ngay sau khi đặt hàng; nội dung chuyển khoản ghi mã đơn (ví dụ HSV000123).",
+    "linkLabel": "Hướng dẫn thanh toán",
+    "linkUrl": "/ho-tro#mua-hang",
+    "phrases": [
+      "có những hình thức thanh toán nào", "thanh toán như thế nào", "có ship cod không", "có thanh toán khi nhận hàng không",
+      "có chuyển khoản được không", "số tài khoản của shop", "cho mình xin số tài khoản", "stk shop là gì", "chuyển khoản vào đâu",
+      "nội dung chuyển khoản ghi gì", "mình đã chuyển khoản rồi", "chuyển khoản xong thì làm gì", "có trả góp không",
+      "có thanh toán bằng thẻ không", "có quẹt thẻ không", "thanh toán bằng momo được không", "có zalopay không", "có vnpay không",
+      "có quét mã qr được không", "thanh toán qr", "trả tiền mặt được không", "nhận hàng rồi mới trả tiền được không",
+      "có cần đặt cọc không", "có phải cọc trước không", "cod", "thanh toan", "hinh thuc thanh toan", "ck được không",
+      "ck cho shop thế nào", "ship cod toàn quốc không", "thanh toán khi nhận tại cửa hàng", "đến cửa hàng trả tiền được không",
+      "thanh toán bằng tiền mặt", "chuyển khoản trước hay sau", "bao lâu thì xác nhận chuyển khoản", "thanh toán online",
+      "trả bằng visa được không", "chuyển khoản ngân hàng nào", "mã qr chuyển khoản ở đâu"
+    ]
+  },
+  {
+    "code": "phi_giao_hang",
+    "name": "Phí và thời gian giao hàng",
+    "action": "None",
+    "answer": "Cửa hàng giao toàn quốc qua Giao Hàng Nhanh (GHN). Phí giao hàng được tính tự động theo địa chỉ của bạn và hiện ngay ở giỏ hàng trước khi đặt. Thời gian giao: nội thành Hà Nội 1 – 2 ngày làm việc, tỉnh thành khác 2 – 5 ngày làm việc. Mọi sản phẩm đều được bọc chống va đập, đóng hộp và bạn được kiểm tra hàng trước khi nhận. Chọn “Nhận tại cửa hàng” thì không mất phí giao hàng.",
+    "linkLabel": "Chính sách giao hàng",
+    "linkUrl": "/ho-tro#giao-hang",
+    "phrases": [
+      "phí ship bao nhiêu", "phí giao hàng thế nào", "ship về hà nội bao nhiêu", "ship vào sài gòn mất bao nhiêu tiền",
+      "giao hàng mất bao lâu", "bao lâu thì nhận được hàng", "có giao hàng toàn quốc không", "có ship tỉnh không",
+      "ship đi đà nẵng được không", "có freeship không", "miễn phí vận chuyển không", "mua bao nhiêu thì được freeship",
+      "phí vận chuyển tính sao", "giao hàng bên nào", "shop gửi hàng qua đơn vị nào", "có giao hỏa tốc không",
+      "giao trong ngày được không", "giao nhanh không", "ship cod mất phí không", "tiền ship ai trả", "phi ship", "phi giao hang",
+      "ship bn", "ship bao nhiêu tiền", "giao hang mat bao lau", "bao lâu tới", "mấy ngày thì nhận được", "có giao tận nhà không",
+      "giao tận nơi không", "có ship tới huyện không", "vùng sâu vùng xa có giao không", "ship hà đông bao lâu",
+      "nội thành hà nội giao mấy ngày", "thứ 7 chủ nhật có giao không", "được kiểm tra hàng trước khi nhận không",
+      "có được xem hàng trước khi trả tiền không", "hàng có được đóng gói cẩn thận không", "hàng dễ vỡ có được bọc kỹ không",
+      "đóng gói thế nào", "ship tphcm bao nhiêu", "ship hcm mất mấy ngày", "giao hàng nhanh", "ghn", "phí ship đơn nhỏ",
+      "mua 1 cái có ship không", "phí ship ra sao", "tiền vận chuyển bao nhiêu"
+    ]
+  },
+  {
+    "code": "nhan_tai_cua_hang",
+    "name": "Nhận tại cửa hàng",
+    "action": "None",
+    "answer": "Bạn chọn “Nhận tại cửa hàng” ở bước đặt hàng là không mất phí giao hàng. Khi hàng chuẩn bị xong, đơn chuyển sang “Sẵn sàng nhận” và bạn sẽ nhận được thông báo — lúc đó bạn đến cửa hàng ở Thụy Ứng, Thường Tín, Hà Nội (8h00 – 21h00, T2 – CN), báo mã đơn để nhận hàng. Bạn trả tiền mặt hoặc chuyển khoản khi đến nhận.",
+    "linkLabel": "Đường đến cửa hàng",
+    "linkUrl": "/cua-hang",
+    "phrases": [
+      "nhận tại cửa hàng được không", "mình muốn đến lấy hàng trực tiếp", "qua shop lấy được không", "có thể tới cửa hàng nhận không",
+      "đặt online rồi qua lấy được không", "nhận hàng tại shop", "lấy hàng ở đâu", "khi nào qua lấy được",
+      "hàng sẵn sàng thì báo mình nhé", "mang gì khi đến nhận hàng", "nhận tại cửa hàng có mất phí không",
+      "tự đến lấy có được miễn phí ship không", "nhan tai cua hang", "den lay hang", "qua lay hang", "lay truc tiep",
+      "có giữ hàng cho mình không", "giữ hàng giúp em", "nhờ người khác nhận hộ được không", "người nhà ra lấy hộ được không",
+      "đến cửa hàng xem trực tiếp được không", "mình muốn xem hàng trực tiếp", "có showroom không", "ghé cửa hàng mua trực tiếp được không",
+      "mua trực tiếp tại cửa hàng", "đặt trước rồi đến lấy", "pick up tại shop", "nhận hàng tại chỗ", "đến tận nơi lấy hàng được không",
+      "chọn nhận tại cửa hàng ở đâu", "đơn nhận tại cửa hàng thanh toán thế nào", "đến lấy hàng có cần mã đơn không",
+      "tự qua lấy hàng", "nhận hàng ở cửa hàng"
+    ]
+  },
+  {
+    "code": "dia_chi_lien_he",
+    "name": "Địa chỉ, giờ mở cửa, liên hệ",
+    "action": "None",
+    "answer": "Cửa hàng Hồn Sừng Việt ở làng nghề Thụy Ứng, Thường Tín, Hà Nội, mở cửa 8h00 – 21h00 tất cả các ngày (T2 – CN). Hotline / Zalo: 0967 459 238 · Email: lienhe@honsungviet.vn.",
+    "linkLabel": "Đường đến cửa hàng",
+    "linkUrl": "/cua-hang",
+    "phrases": [
+      "cửa hàng ở đâu", "địa chỉ shop", "shop ở đâu vậy", "địa chỉ cửa hàng", "cho xin địa chỉ", "cửa hàng mở cửa mấy giờ",
+      "giờ mở cửa", "mấy giờ đóng cửa", "chủ nhật có mở cửa không", "ngày lễ có mở không", "số điện thoại shop", "hotline là gì",
+      "cho xin số zalo", "zalo shop", "email của shop", "liên hệ với shop thế nào", "facebook của shop", "fanpage shop",
+      "có chi nhánh không", "có cửa hàng ở sài gòn không", "có cửa hàng ở hcm không", "đường đi tới cửa hàng",
+      "chỉ đường đến cửa hàng", "cửa hàng gần nhất", "dia chi cua hang", "shop o dau", "gio mo cua", "sdt shop", "so dien thoai",
+      "hotline", "thụy ứng ở đâu", "làng nghề thụy ứng đi thế nào", "từ trung tâm hà nội đi thế nào", "mấy giờ shop làm việc",
+      "thời gian làm việc", "tối có mở cửa không", "mở cửa đến mấy giờ", "liên hệ", "thông tin liên hệ", "instagram của shop",
+      "shop có ở hà nội không", "cho mình số hotline với", "google map cửa hàng"
+    ]
+  },
+  {
+    "code": "doi_tra",
+    "name": "Đổi trả, bảo hành",
+    "action": "None",
+    "answer": "Bạn được đổi sản phẩm trong 7 ngày kể từ khi nhận, khi sản phẩm còn nguyên vẹn, chưa qua sử dụng, còn đủ hộp và phụ kiện; đổi sang cỡ hoặc mẫu khác cùng giá hoặc giá cao hơn (bù chênh lệch). Sản phẩm lỗi do chế tác (nứt, cong vênh, sai cỡ so với đơn) được đổi mới và cửa hàng chịu phí vận chuyển. Không áp dụng cho sản phẩm khắc chữ theo yêu cầu hoặc hư hỏng do dùng sai cách. Để đổi hàng, bạn gọi 0967 459 238 hoặc email lienhe@honsungviet.vn kèm mã đơn và ảnh sản phẩm.",
+    "linkLabel": "Chính sách đổi trả",
+    "linkUrl": "/ho-tro#doi-tra",
+    "phrases": [
+      "chính sách đổi trả", "đổi trả thế nào", "có được đổi hàng không", "mua về không vừa có đổi được không", "đổi size được không",
+      "vòng không vừa tay muốn đổi", "nhẫn chật quá đổi được không", "hàng bị lỗi thì sao", "sản phẩm bị nứt", "lược bị gãy răng",
+      "hàng giao bị vỡ", "nhận hàng bị hỏng", "trả hàng được không", "hoàn tiền được không", "có hoàn tiền không",
+      "không ưng có trả lại được không", "bảo hành bao lâu", "có bảo hành không", "chính sách bảo hành", "đổi mẫu khác được không",
+      "đổi trong bao nhiêu ngày", "quá 7 ngày có đổi được không", "đổi hàng mất phí không", "phí ship đổi hàng ai chịu", "doi tra",
+      "doi hang", "chinh sach doi tra", "bao hanh", "hang loi", "san pham bi loi", "giao nhầm hàng", "giao sai mẫu",
+      "giao thiếu hàng", "sản phẩm không giống ảnh", "hàng không giống hình", "đã dùng rồi có đổi được không",
+      "sản phẩm khắc tên có đổi được không", "mất hộp có đổi được không", "cách gửi trả hàng", "gửi hàng đổi về đâu",
+      "muốn đổi sang cái đắt hơn", "đổi hàng cần những gì", "hàng kém chất lượng", "sản phẩm bị cong vênh",
+      "bị sai size so với đơn đặt", "sừng bị nứt sau vài ngày dùng"
+    ]
+  },
+  {
+    "code": "chon_size",
+    "name": "Chọn size vòng tay, nhẫn",
+    "action": "None",
+    "answer": "Cách chọn cỡ — Vòng tay: khép các ngón tay như khi đeo vòng, đo chu vi chỗ rộng nhất của bàn tay: 17 – 18 cm chọn cỡ 56, 18 – 19 cm chọn cỡ 58, 19 – 20,5 cm chọn cỡ 60. Nhẫn: đo chu vi gốc ngón tay: 52 mm ≈ ni 12, 54 mm ≈ ni 14, 56 mm ≈ ni 16, 58 mm ≈ ni 18, 60 mm ≈ ni 20. Phân vân giữa hai cỡ thì nên chọn cỡ lớn hơn vì sừng không co giãn.",
+    "linkLabel": "Hướng dẫn chọn size",
+    "linkUrl": "/ho-tro#chon-size",
+    "phrases": [
+      "chọn size vòng tay thế nào", "đo size vòng tay", "cách đo tay", "tay mình 18cm đeo size nào", "cổ tay nhỏ đeo cỡ nào",
+      "size nhẫn của mình là bao nhiêu", "cách đo size nhẫn", "ni nhẫn bao nhiêu", "ngón tay 54mm đeo ni mấy", "bảng size",
+      "bảng kích thước", "vòng size 58 là bao nhiêu cm", "cỡ 56 hợp với tay thế nào", "nam đeo size nào",
+      "nữ thường đeo size bao nhiêu", "tư vấn size giúp mình", "không biết chọn size nào", "size vong tay", "do size nhan", "chon size",
+      "kich thuoc vong", "đường kính vòng bao nhiêu", "vòng có co giãn không", "nhẫn có chỉnh size được không", "tay to đeo được không",
+      "size lớn nhất là bao nhiêu", "size nhỏ nhất", "nên chọn size to hay nhỏ", "phân vân giữa hai size", "size cho trẻ em",
+      "chu vi bàn tay 19cm", "vòng cỡ 60 có rộng không", "nhẫn ni 16", "hướng dẫn chọn cỡ", "đo tay thế nào để mua vòng",
+      "tay 20cm đeo vòng cỡ mấy"
+    ]
+  },
+  {
+    "code": "bao_quan",
+    "name": "Bảo quản đồ sừng",
+    "action": "None",
+    "answer": "Cách giữ đồ sừng luôn đẹp: lau khô sau khi dùng, không ngâm nước lâu hay rửa bằng nước nóng; tránh để gần nguồn nhiệt, nắng gắt và nơi quá ẩm; thỉnh thoảng thoa một lớp mỏng dầu dừa hoặc dầu ô liu rồi lau lại bằng khăn mềm để sừng bóng và không bị khô nứt.",
+    "phrases": [
+      "bảo quản đồ sừng thế nào", "cách bảo quản lược sừng", "lược sừng có bị mốc không", "sừng có bị nứt không",
+      "vệ sinh lược sừng như thế nào", "rửa lược bằng nước được không", "ngâm nước có sao không", "đeo vòng sừng đi tắm được không",
+      "đi bơi đeo vòng được không", "lau chùi đồ sừng", "làm sao cho sừng bóng", "sừng bị xỉn màu", "sừng bị khô",
+      "có cần thoa dầu không", "dùng dầu gì để bảo dưỡng", "đồ sừng dùng được bao lâu", "có bền không", "độ bền thế nào",
+      "để ngoài nắng có sao không", "bao quan do sung", "cach bao quan", "ve sinh luoc", "lược sừng có mùi không",
+      "sừng có mùi hôi không", "khử mùi sừng", "đồ sừng có bị mọt không", "thìa sừng rửa bằng máy rửa bát được không",
+      "dùng thìa sừng ăn đồ nóng được không", "đũa sừng có chịu nhiệt không", "làm sao để vòng không bị trầy", "lỡ làm rơi có vỡ không",
+      "sừng có dễ gãy không", "cất giữ đồ sừng", "mùa nồm có bị ẩm mốc không", "giữ đồ sừng không bị nứt", "chăm sóc lược sừng"
+    ]
+  },
+  {
+    "code": "nguon_goc",
+    "name": "Nguồn gốc, sừng thật",
+    "action": "None",
+    "answer": "Sản phẩm của Hồn Sừng Việt làm từ sừng trâu, sừng bò tự nhiên, chế tác thủ công tại làng nghề sừng Thụy Ứng (Thường Tín, Hà Nội). Sừng thật 100%, nguyên liệu có hồ sơ nguồn gốc.",
+    "linkLabel": "Nguồn gốc nguyên liệu",
+    "linkUrl": "/nguon-goc",
+    "phrases": [
+      "sừng thật không", "có phải sừng thật không", "làm sao biết sừng thật hay giả", "sừng giả và sừng thật khác nhau thế nào",
+      "có phải nhựa không", "sản phẩm làm từ gì", "nguyên liệu là gì", "sừng trâu hay sừng bò", "sừng lấy từ đâu", "nguồn gốc sừng",
+      "sừng trâu ở đâu", "xuất xứ sản phẩm", "hàng việt nam không", "có phải hàng trung quốc không", "làm thủ công hay máy",
+      "ai làm ra sản phẩm", "làng nghề thụy ứng", "câu chuyện thương hiệu", "giới thiệu về shop", "hồn sừng việt là gì",
+      "có giấy chứng nhận không", "sung that khong", "sung gia", "nguon goc", "xuat xu", "lam bang gi",
+      "sừng trâu và sừng bò cái nào tốt hơn", "vì sao giá sừng thật đắt", "có cam kết sừng thật không", "đốt thử có biết sừng thật không",
+      "sản phẩm có được làm thủ công 100% không", "nghệ nhân làm", "quy trình làm sản phẩm", "tại sao vân sừng khác nhau",
+      "màu sừng tự nhiên không", "có nhuộm màu không", "hàng thật hay hàng giả", "sừng tự nhiên không"
+    ]
+  },
+  {
+    "code": "goi_qua_khac_chu",
+    "name": "Gói quà, khắc chữ",
+    "action": "None",
+    "answer": "Cần gói quà, bạn ghi vào ô “Ghi chú” khi đặt hàng, cửa hàng sẽ gói giúp; mọi sản phẩm đều được đóng hộp cẩn thận. Muốn khắc chữ, khắc tên theo yêu cầu, bạn bấm “Chat với nhân viên” để trao đổi mẫu khắc và thời gian làm nhé (sản phẩm khắc theo yêu cầu không áp dụng đổi hàng).",
+    "phrases": [
+      "có gói quà không", "gói quà giúp mình", "có hộp quà không", "có túi quà không", "gói quà có mất phí không",
+      "ghi thiệp giúp được không", "viết thiệp chúc mừng", "có khắc tên được không", "khắc chữ lên lược được không",
+      "khắc tên lên vòng tay", "khắc theo yêu cầu", "làm theo mẫu riêng được không", "in logo lên sản phẩm",
+      "quà tặng có hộp đẹp không", "mua làm quà thì gói thế nào", "goi qua", "khac ten", "khac chu", "hop qua",
+      "tặng người yêu thì gói quà giúp nhé", "ghi lời chúc vào thiệp", "khắc chữ mất bao lâu", "khắc tên giá bao nhiêu",
+      "khắc ngày kỷ niệm", "quà sinh nhật có gói không", "gói quà tết", "hộp đựng sản phẩm thế nào", "có giấy gói không",
+      "giao quà tặng không ghi giá được không", "không để hóa đơn trong hộp quà", "mình muốn tặng bất ngờ", "đặt khắc theo ảnh",
+      "khắc tên lên lược tặng mẹ", "có dịch vụ gói quà không"
+    ]
+  },
+  {
+    "code": "mua_si_dat_rieng",
+    "name": "Mua sỉ, đặt làm riêng",
+    "action": "Handoff",
+    "answer": "Với đơn số lượng lớn, quà tặng doanh nghiệp hay đặt làm theo thiết kế riêng, bạn bấm “Chat với nhân viên” hoặc gọi 0967 459 238 để nhân viên tư vấn và báo giá trực tiếp nhé.",
+    "phrases": [
+      "mua sỉ được không", "giá sỉ bao nhiêu", "lấy sỉ", "có bán buôn không", "mình muốn nhập hàng về bán", "làm đại lý được không",
+      "chính sách đại lý", "cộng tác viên", "ctv bán hàng", "mua số lượng lớn có giảm giá không", "đặt 100 cái",
+      "đặt 50 chiếc làm quà", "quà tặng doanh nghiệp", "quà tặng sự kiện", "quà tặng hội nghị", "đặt hàng cho công ty",
+      "xuất hóa đơn vat", "có xuất hóa đơn đỏ không", "hợp tác kinh doanh", "muốn hợp tác với shop", "ship số lượng lớn",
+      "mua si", "gia si", "ban buon", "dai ly", "đặt làm riêng theo thiết kế", "gia công theo yêu cầu", "làm theo bản vẽ",
+      "đặt hàng số lượng lớn", "mua nhiều có chiết khấu không", "giá cho khách mua nhiều", "nhận đơn đặt riêng không",
+      "làm quà tặng đối tác", "có catalogue không", "xin báo giá số lượng lớn", "kí gửi hàng", "nhập hàng", "khắc logo công ty"
+    ]
+  },
+  {
+    "code": "gap_nhan_vien",
+    "name": "Gặp nhân viên",
+    "action": "Handoff",
+    "answer": "Bạn bấm nút “Chat với nhân viên” bên dưới, nhân viên sẽ trả lời bạn ngay tại đây. Hoặc gọi hotline 0967 459 238 (8h00 – 21h00).",
+    "phrases": [
+      "cho mình gặp nhân viên", "gặp người thật", "nói chuyện với nhân viên", "chat với nhân viên", "muốn nói chuyện với người",
+      "kết nối nhân viên tư vấn", "cần nhân viên hỗ trợ", "nhân viên đâu rồi", "có nhân viên không", "gọi nhân viên giúp",
+      "tôi muốn gặp quản lý", "chuyển cho người thật", "bot không hiểu, cho gặp người", "không muốn nói chuyện với bot",
+      "bạn là bot à", "bạn có phải người thật không", "mình cần tư vấn trực tiếp", "tư vấn viên", "cskh", "chăm sóc khách hàng",
+      "hỗ trợ khách hàng", "gap nhan vien", "nguoi that", "noi chuyen voi nhan vien", "cho gap admin", "admin đâu",
+      "chủ shop đâu", "gặp chủ shop", "gọi điện cho mình được không", "shop gọi lại cho mình nhé", "mình muốn khiếu nại",
+      "có ai online không", "có ai trực không ạ", "có ai ở đây không", "hỗ trợ trực tuyến", "live chat",
+      "mình cần người hỗ trợ gấp", "gấp lắm cho gặp nhân viên", "tôi cần nói chuyện với người phụ trách", "ib riêng được không",
+      "nhắn tin riêng với shop", "inbox shop", "liên hệ nhân viên", "bấm vào đâu để chat với nhân viên", "bot trả lời sai rồi",
+      "trả lời không đúng ý mình"
+    ]
+  },
+  {
+    "code": "tai_khoan",
+    "name": "Tài khoản, mật khẩu",
+    "action": "None",
+    "answer": "Bạn đăng ký hoặc đăng nhập ở mục Tài khoản (góc trên bên phải; trên điện thoại ở thanh dưới cùng). Quên mật khẩu thì bấm “Quên mật khẩu” ở trang đăng nhập, nhập email để nhận mã xác nhận 6 số (mã có hiệu lực 60 giây, nhớ xem cả thư mục Spam) rồi đặt mật khẩu mới. Hồ sơ, sổ địa chỉ và mật khẩu đổi được trong trang Tài khoản. Tài khoản bị khóa hoặc muốn xóa tài khoản, bạn gửi email tới lienhe@honsungviet.vn.",
+    "linkLabel": "Đăng nhập",
+    "linkUrl": "/login",
+    "phrases": [
+      "đăng ký tài khoản thế nào", "tạo tài khoản", "làm sao để đăng nhập", "không đăng nhập được", "quên mật khẩu",
+      "lấy lại mật khẩu", "đổi mật khẩu", "không nhận được mã xác nhận", "mã xác nhận hết hạn", "email không nhận được mã",
+      "đăng nhập bằng google được không", "sửa thông tin tài khoản", "đổi số điện thoại tài khoản", "đổi email",
+      "thêm địa chỉ giao hàng", "sổ địa chỉ", "xóa tài khoản", "tài khoản bị khóa", "dang ky", "dang nhap", "quen mat khau",
+      "doi mat khau", "lay lai mat khau", "mất tài khoản", "sao không vào được tài khoản", "mật khẩu sai",
+      "tạo tài khoản có mất phí không", "cập nhật hồ sơ", "đổi tên hiển thị", "đăng xuất", "đăng nhập trên điện thoại",
+      "đăng ký thành viên", "không tạo được tài khoản", "email đã được sử dụng"
+    ]
+  }
+]

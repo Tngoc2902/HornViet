@@ -1,3 +1,5 @@
+using HornViet.Application.Chat;
+using HornViet.Domain.Chat.Enums;
 using HornViet.Domain.Orders.Enums;
 
 namespace HornViet.Application.Common;
@@ -10,7 +12,8 @@ namespace HornViet.Application.Common;
 /// <remarks>
 /// Chỉ gọi SAU khi <c>IUnitOfWork.SaveChangesAsync</c> thành công để không báo một thay đổi chưa được lưu.
 /// Cài đặt không được ném lỗi: gửi thông báo thất bại không làm hỏng thao tác nghiệp vụ đã lưu.
-/// Payload không chứa thông tin cá nhân của khách (tên, số điện thoại, địa chỉ).
+/// Payload không chứa thông tin cá nhân của khách (tên, số điện thoại, địa chỉ). Ngoại lệ duy nhất là nội dung tin nhắn hỗ trợ:
+/// chỉ gửi tới nhóm của đúng hội thoại đó (chính khách và nhân viên đang mở hội thoại), không gửi cho cả nhóm quản trị.
 /// </remarks>
 public interface IRealtimeNotifier
 {
@@ -34,7 +37,18 @@ public interface IRealtimeNotifier
 
     /// <summary>Phiên đăng nhập của tài khoản bị thu hồi (khóa, đổi vai trò, đổi / đặt lại mật khẩu) → đăng xuất ngay.</summary>
     Task SessionRevokedAsync(long userId, SessionRevokedReason reason);
+
+    /// <summary>Tin nhắn mới trong hội thoại hỗ trợ → khách và nhân viên đang mở hội thoại đó.</summary>
+    Task ChatMessageAsync(int conversationId, ChatMessageDto message);
+
+    /// <summary>
+    /// Hội thoại đổi trạng thái / có tin mới cần nhân viên → trang quản trị cập nhật danh sách và số tin chưa đọc
+    /// (không kèm nội dung), đồng thời báo trạng thái mới cho khách.
+    /// </summary>
+    Task ChatConversationChangedAsync(ChatConversationChangedEvent e);
 }
+
+public record ChatConversationChangedEvent(int ConversationId, ChatConversationStatus Status, int StaffUnread, long? StaffUserId);
 
 /// <summary>Đơn mới: chỉ mã đơn, số lượng sản phẩm và tổng tiền.</summary>
 public record OrderCreatedEvent(int OrderId, string Code, int ItemCount, decimal TotalAmount, DateTime CreationTime);

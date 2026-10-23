@@ -1,4 +1,8 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using HornViet.Domain.Catalog.Entities;
+using HornViet.Domain.Chat.Entities;
+using HornViet.Domain.Chat.Enums;
 using HornViet.Domain.Interfaces.Repositories;
 using HornViet.Domain.Users.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -16,7 +20,7 @@ public class SeedOptions
 }
 
 /// <summary>
-/// Khởi tạo dữ liệu ban đầu (vai trò, tài khoản quản trị/nhân viên demo, danh mục mẫu).
+/// Khởi tạo dữ liệu ban đầu (vai trò, tài khoản quản trị/nhân viên demo, danh mục mẫu, ý định + câu mẫu của chatbot).
 /// Chạy lặp lại an toàn: chỉ thêm phần còn thiếu. Không tạo dữ liệu khách hàng.
 /// </summary>
 public class DataSeeder
@@ -26,18 +30,20 @@ public class DataSeeder
     private readonly IRepository<Category, int> _categories;
     private readonly IRepository<Material, int> _materials;
     private readonly IRepository<Product, int> _products;
+    private readonly IRepository<ChatIntent, int> _chatIntents;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher<User> _passwordHasher;
 
     public DataSeeder(IRepository<Role, int> roles, IRepository<User, long> users, IRepository<Category, int> categories,
-        IRepository<Material, int> materials, IRepository<Product, int> products, IUnitOfWork unitOfWork,
-        IPasswordHasher<User> passwordHasher)
+        IRepository<Material, int> materials, IRepository<Product, int> products, IRepository<ChatIntent, int> chatIntents,
+        IUnitOfWork unitOfWork, IPasswordHasher<User> passwordHasher)
     {
         _roles = roles;
         _users = users;
         _categories = categories;
         _materials = materials;
         _products = products;
+        _chatIntents = chatIntents;
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
     }
@@ -49,6 +55,39 @@ public class DataSeeder
         await SeedUserAsync("staff", "Nhân viên", "staff@honsungviet.local", options.StaffPassword, nameof(RoleName.Staff));
         if (options.SampleCatalog)
             await SeedCatalogAsync();
+        await SeedChatbotAsync();
+    }
+
+    private record SeedIntent(string Code, string Name, ChatIntentAction Action, string Answer, string? LinkLabel, string? LinkUrl,
+        List<string> Phrases);
+
+    /// <summary>
+    /// Bộ ý định + câu mẫu ban đầu của chatbot (Chat/Seed/chat-intents.json). Chỉ nạp khi chưa có ý định nào — sau đó
+    /// quản trị tự sửa / thêm / xóa ở trang "Huấn luyện chatbot", deploy lại không ghi đè.
+    /// </summary>
+    private async Task SeedChatbotAsync()
+    {
+        if (await _chatIntents.GetAll().AnyAsync())
+            return;
+        await using var stream = typeof(DataSeeder).Assembly.GetManifestResourceStream("HornViet.Chat.Seed.chat-intents.json")
+                                 ?? throw new InvalidOperationException("Thiếu dữ liệu mẫu chatbot (chat-intents.json).");
+        var intents = await JsonSerializer.DeserializeAsync<List<SeedIntent>>(stream, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() }
+        }) ?? [];
+        foreach (var i in intents)
+            await _chatIntents.InsertAsync(new ChatIntent
+            {
+                Code = i.Code,
+                Name = i.Name,
+                Action = i.Action,
+                Answer = i.Answer,
+                LinkLabel = i.LinkLabel,
+                LinkUrl = i.LinkUrl,
+                Phrases = i.Phrases.Distinct().Select(p => new ChatPhrase { Text = p }).ToList()
+            });
+        await _unitOfWork.SaveChangesAsync();
     }
 
     private async Task SeedRolesAsync()

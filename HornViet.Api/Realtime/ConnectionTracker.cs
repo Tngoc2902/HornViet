@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using HornViet.Application.Common;
 
 namespace HornViet.Api.Realtime;
 
@@ -8,7 +9,7 @@ namespace HornViet.Api.Realtime;
 /// kể cả khi giao diện bỏ qua sự kiện SessionRevoked.
 /// </summary>
 /// <remarks>Chạy nhiều máy chủ (scale-out) thì cần backplane (VD Redis) thay cho lớp này.</remarks>
-public class ConnectionTracker
+public class ConnectionTracker : IStaffPresence
 {
     public record Connection(string ConnectionId, long UserId, bool IsManagement);
 
@@ -21,4 +22,7 @@ public class ConnectionTracker
 
     public IReadOnlyList<Connection> ForUser(long userId) =>
         _connections.Values.Where(c => c.UserId == userId).ToList();
+
+    /// <summary>Có nhân viên / quản trị viên nào đang mở trang quản trị (ô chat báo khách "nhân viên sẽ trả lời ngay").</summary>
+    public bool AnyStaffOnline() => _connections.Values.Any(c => c.IsManagement);
 }

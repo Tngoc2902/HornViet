@@ -57,4 +57,15 @@ public static class AppConsts
     // Chống spam email: trong khoảng này, yêu cầu Quên mật khẩu lặp lại cho cùng tài khoản không gửi thêm email.
     /// <summary>Số giây tối thiểu giữa hai lần gửi mã xác nhận cho cùng một tài khoản.</summary>
     public const int PasswordResetResendSeconds = 30;
+
+    // Chatbot: model đoán ý định kèm độ tin cậy (xác suất 0–1). Dưới ngưỡng thì bot nói "chưa hiểu", gợi ý gặp nhân viên
+    // và đưa câu đó vào danh sách "Câu bot chưa hiểu" để quản trị gán nhãn, huấn luyện lại.
+    /// <summary>Độ tin cậy tối thiểu để bot trả lời theo ý định đoán được.</summary>
+    public const double ChatConfidenceThreshold = 0.5;
+
+    /// <summary>Số câu mẫu tối thiểu của mỗi ý định đang bật khi huấn luyện.</summary>
+    public const int ChatMinPhrasesPerIntent = 5;
+
+    /// <summary>Độ dài tối đa (ký tự) của một tin nhắn chat.</summary>
+    public const int ChatMaxMessageLength = 1000;
 }
